@@ -80,6 +80,14 @@
 
     function errorMessage(error) {
         var message = error && (error.message || (error.data && error.data.message));
+        var code = String((error && error.code) || '');
+
+        // Only what this plugin said. Anything else — a gateway timeout, a
+        // proxy's error page — comes with a message written for developers
+        // ("The response is not a valid JSON response.").
+        if (code.indexOf('wc_store_balance') !== 0) {
+            message = '';
+        }
 
         // The server sends messages with entities encoded.
         if (message) {

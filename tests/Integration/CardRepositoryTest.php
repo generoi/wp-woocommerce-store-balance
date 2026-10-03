@@ -602,4 +602,20 @@ class CardRepositoryTest extends TestCase
         $this->assertSame('', $card->message);
         $this->assertSame('', $card->recipientEmail);
     }
+
+    /**
+     * A card that expires tomorrow is still good today. A declined payment
+     * the day before expiry must not be a way to get another month.
+     */
+    public function test_money_returned_to_a_card_that_expires_tomorrow_leaves_its_date_alone(): void
+    {
+        $expiry = time() + DAY_IN_SECONDS;
+        $card = $this->giftCard(50, ['expires_at' => $expiry]);
+
+        $this->cards->debit($card->id, 50);
+        $this->cards->credit($card->id, 50);
+        $this->cards->credit($card->id, 1, CardRepository::TX_REFUND);
+
+        $this->assertSame($expiry, $this->cards->find($card->id)->expiresAt);
+    }
 }

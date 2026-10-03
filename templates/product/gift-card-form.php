@@ -120,6 +120,8 @@ $error = static function (string $field) use ($errors): void {
                     <?php echo $describe('custom_amount', 'store-balance-custom-hint'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped?>
                     data-min="<?php echo esc_attr((string) $custom['min']); ?>"
                     data-max="<?php echo esc_attr((string) $custom['max']); ?>"
+                    data-currency="<?php echo esc_attr(get_woocommerce_currency()); ?>"
+                    data-symbol="<?php echo esc_attr(html_entity_decode($symbol, ENT_QUOTES, 'UTF-8')); ?>"
                     data-range-message="<?php echo esc_attr($range_message); ?>"
                     data-number-message="<?php esc_attr_e('Enter the amount as a number, for example 50 or 49,90.', 'wp-woocommerce-store-balance'); ?>"
                 >

@@ -41,7 +41,7 @@ class GiftCardEmail extends CardEmail
     protected function sampleCard(): Card
     {
         return new Card([
-            'code' => 'ABCDEFGH23456789',
+            'code' => 'GIFT0000CARD0001', // Has 0, 1 and I in it: never a real code.
             'type' => Card::TYPE_GIFT_CARD,
             'currency' => get_woocommerce_currency(),
             'initial_amount' => 50,

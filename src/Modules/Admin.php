@@ -286,7 +286,8 @@ class Admin implements Module
         ];
 
         if ($card->isGiftCard()) {
-            $rows[__('Code', 'wp-woocommerce-store-balance')] = '<code class="wc-store-balance-admin__code">'.esc_html($card->formattedCode()).'</code>';
+            $rows[__('Code', 'wp-woocommerce-store-balance')] = '<code class="wc-store-balance-admin__code">'.esc_html($card->formattedCode()).'</code>'
+                .' <button type="button" class="button button-small" data-copy="'.esc_attr($card->formattedCode()).'" data-copied="'.esc_attr__('Copied', 'wp-woocommerce-store-balance').'"">'.esc_html__('Copy', 'wp-woocommerce-store-balance').'</button>';
             $rows[__('Sent to', 'wp-woocommerce-store-balance')] = esc_html($card->recipientEmail ?: '–');
             $rows[__('From', 'wp-woocommerce-store-balance')] = esc_html($card->senderName ?: '–');
             $rows[__('Message', 'wp-woocommerce-store-balance')] = $card->message !== '' ? nl2br(esc_html($card->message)) : '–';
@@ -479,7 +480,13 @@ class Admin implements Module
         (function () {
             var current = <?php echo wp_json_encode((float) $card->balance); ?>;
             var original = <?php echo wp_json_encode((float) $card->initialAmount); ?>;
-            var currency = <?php echo wp_json_encode($card->currency); ?>;
+            var format = <?php echo wp_json_encode([
+                'decimals' => wc_get_price_decimals(),
+                'decimal' => wc_get_price_decimal_separator(),
+                'thousand' => wc_get_price_thousand_separator(),
+                'symbol' => html_entity_decode(get_woocommerce_currency_symbol($card->currency), ENT_QUOTES, 'UTF-8'),
+                'pattern' => html_entity_decode(get_woocommerce_price_format(), ENT_QUOTES, 'UTF-8'),
+            ]); ?>;
             var above = <?php echo wp_json_encode(sprintf(
                 /* translators: %s: amount */
                 __('This is more than the card\'s original %s.', 'wp-woocommerce-store-balance'),
@@ -498,13 +505,31 @@ class Admin implements Module
                 return /^\d+(\.\d{0,2})?$/.test(v) ? parseFloat(v) : NaN;
             }
 
+            // Written the way the shop writes prices everywhere else.
             function money(amount) {
-                try {
-                    return new Intl.NumberFormat(document.documentElement.lang || undefined, { style: 'currency', currency: currency }).format(amount);
-                } catch (e) {
-                    return amount.toFixed(2) + ' ' + currency;
-                }
+                var parts = amount.toFixed(format.decimals).split('.');
+                var whole = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, format.thousand);
+                var number = parts[1] ? whole + format.decimal + parts[1] : whole;
+
+                return format.pattern.replace('%1$s', format.symbol).replace('%2$s', number);
             }
+
+            document.querySelectorAll('[data-copy]').forEach(function (button) {
+                button.addEventListener('click', function () {
+                    if (!navigator.clipboard) {
+                        return;
+                    }
+
+                    navigator.clipboard.writeText(button.dataset.copy).then(function () {
+                        var label = button.textContent;
+
+                        button.textContent = button.dataset.copied;
+                        window.setTimeout(function () {
+                            button.textContent = label;
+                        }, 1500);
+                    });
+                });
+            });
 
             document.querySelectorAll('.wc-store-balance-admin__action[data-confirm]').forEach(function (form) {
                 form.addEventListener('submit', function (event) {
@@ -520,6 +545,11 @@ class Admin implements Module
                         }
 
                         var difference = amount - current;
+
+                        // Nothing to confirm; the server says so.
+                        if (Math.abs(difference) < 0.005) {
+                            return;
+                        }
 
                         message = message
                             .replace('{balance}', money(amount))

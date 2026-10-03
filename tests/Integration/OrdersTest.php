@@ -631,6 +631,9 @@ class OrdersTest extends TestCase
         $this->assertSame(50.0, $this->balance($card));
         $this->assertSame(CardRepository::TX_RELEASE, $this->ledger($card)[2]->type);
         $this->assertSame($orderId, (int) $this->ledger($card)[2]->order_id);
+        $this->assertCount(3, $this->ledger($card));
+        // Whichever hook got there first, the history says what happened.
+        $this->assertSame('Order removed', $this->ledger($card)[2]->note);
     }
 
     public function test_an_order_taken_out_of_the_trash_takes_the_balance_again(): void
@@ -895,5 +898,313 @@ class OrdersTest extends TestCase
         $order->update_status('cancelled');
 
         $this->assertSame(50.0, wc_store_balance_get_customer_balance($customerId, 'EUR'));
+    }
+
+    /**
+     * The checkout block does not use WooCommerce's "order awaiting payment"
+     * session key, so the plugin keeps its own list of the orders this
+     * session paid from a balance. An abandoned one has to be found there.
+     */
+    public function test_an_abandoned_order_is_found_through_the_plugins_own_session_list(): void
+    {
+        [$order, $card] = $this->orderPaidPartlyWithStoreCredit(50);
+
+        $this->assertSame([$order->get_id()], WC()->session->get(Orders::SESSION_ORDERS));
+        $this->assertNull(WC()->session->get('order_awaiting_payment'));
+
+        WC()->cart->empty_cart();
+        WC()->cart->add_to_cart($this->product(100)->get_id());
+
+        $second = $this->placeOrder();
+        $abandoned = wc_get_order($order->get_id());
+
+        $this->assertSame('cancelled', $abandoned->get_status());
+        $this->assertSame(0.0, Orders::held($abandoned));
+        // Nothing is lost and nothing is counted twice: the 50 is either on
+        // the card again or held by the new order.
+        $this->assertSame(50.0, round($this->balance($card) + Orders::held($second), 2));
+        $this->assertSame(100.0, round((float) $second->get_total() + Orders::held($second), 2));
+        $this->assertNotContains($abandoned->get_id(), WC()->session->get(Orders::SESSION_ORDERS));
+
+        $notes = implode("\n", array_map(static fn ($note) => $note->content, wc_get_order_notes(['order_id' => $abandoned->get_id()])));
+
+        $this->assertStringContainsString('placed a new order instead', $notes);
+    }
+
+    /**
+     * Back at the checkout the customer has to see the balance their own
+     * abandoned attempt is sitting on, or they are asked to pay in full and
+     * get the balance back only after they have.
+     */
+    public function test_the_cart_counts_what_an_abandoned_order_in_the_plugins_list_holds(): void
+    {
+        [$order, $card] = $this->orderPaidPartlyWithStoreCredit(50);
+
+        $this->assertNull(WC()->session->get('order_awaiting_payment'));
+        $this->assertSame([$order->get_id()], WC()->session->get(Orders::SESSION_ORDERS));
+
+        WC()->cart->empty_cart();
+        WC()->cart->add_to_cart($this->product(100)->get_id());
+
+        $this->assertSame(50.0, $this->state()['account']['available']);
+        $this->assertSame(50.0, $this->cartTotal());
+    }
+
+    /**
+     * The customer was at their bank in another tab: the payment for the
+     * abandoned order arrives after all. WooCommerce reopens it, and a live
+     * order has to hold its money again.
+     */
+    public function test_a_late_payment_for_an_abandoned_order_takes_the_balance_again_when_it_is_still_there(): void
+    {
+        [$order, $card] = $this->orderPaidPartlyWithStoreCredit(50);
+
+        WC()->cart->empty_cart();
+        WC()->cart->add_to_cart($this->product(100)->get_id());
+        $this->cart()->setUseBalance(false);
+        $second = $this->placeOrder();
+
+        $this->assertSame('cancelled', wc_get_order($order->get_id())->get_status());
+        $this->assertSame(50.0, $this->balance($card));
+        $this->assertSame(100.0, (float) $second->get_total());
+
+        wc_get_order($order->get_id())->payment_complete('late-payment');
+
+        $first = wc_get_order($order->get_id());
+
+        $this->assertSame('processing', $first->get_status());
+        $this->assertSame(50.0, Orders::held($first));
+        $this->assertSame(139.0, (float) $first->get_total());
+        $this->assertSame(0.0, $this->balance($card));
+        $this->assertSame(
+            [CardRepository::TX_ISSUE, CardRepository::TX_DEBIT, CardRepository::TX_RELEASE, CardRepository::TX_DEBIT],
+            $this->ledgerTypes($card)
+        );
+    }
+
+    /**
+     * The same late payment, but the second order has spent the balance by
+     * then. The first order is paid at the gateway for 139 of its 189; it
+     * must not be packed and shipped as if it were paid in full.
+     */
+    public function test_a_late_payment_for_an_abandoned_order_whose_balance_is_gone_puts_it_on_hold(): void
+    {
+        [$order, $card] = $this->orderPaidPartlyWithStoreCredit(50);
+
+        WC()->session->set('order_awaiting_payment', $order->get_id());
+        WC()->cart->add_to_cart($this->product(29)->get_id());
+        $second = $this->placeOrder();
+
+        $this->assertSame(0.0, $this->balance($card));
+        $this->assertSame(50.0, Orders::held($second));
+
+        wc_get_order($order->get_id())->payment_complete('late-payment');
+
+        $first = wc_get_order($order->get_id());
+        $notes = implode("\n", array_map(static fn ($note) => $note->content, wc_get_order_notes(['order_id' => $first->get_id()])));
+
+        $this->assertSame('on-hold', $first->get_status());
+        $this->assertSame(0.0, Orders::held($first));
+        // What the balance no longer pays is owed again, and shown as owed.
+        $this->assertSame(189.0, (float) $first->get_total());
+        $this->assertSame([], Orders::lines($first));
+        $this->assertSame([], preg_grep('/^store_balance/', array_keys($first->get_order_item_totals())));
+        $this->assertStringContainsString('unpaid', $notes);
+        $this->assertDoesNotMatchRegularExpression('/&[a-z#0-9]+;/i', $notes);
+        // The card is not driven below zero, and the second order keeps its money.
+        $this->assertSame(0.0, $this->balance($card));
+        $this->assertSame(50.0, Orders::held(wc_get_order($second->get_id())));
+        $this->assertSame('pending', wc_get_order($second->get_id())->get_status());
+
+        // Recalculating must not take the lost balance off again.
+        $first->calculate_totals();
+        $this->assertSame(189.0, (float) $first->get_total());
+    }
+
+    /**
+     * An order the balance covered in full shows a total of zero. Reopened
+     * after the card was emptied elsewhere, it is an unpaid order for the
+     * whole amount, and has to say so.
+     */
+    public function test_reopening_a_fully_covered_order_whose_card_was_emptied_makes_the_whole_amount_due(): void
+    {
+        [$order, $card] = $this->orderPaidPartlyWithStoreCredit(35.15, 35.15);
+
+        $this->assertSame(0.0, (float) $order->get_total());
+
+        $order->update_status('cancelled');
+        $this->cards->debit($card->id, 35.15);
+        wc_get_order($order->get_id())->update_status('processing');
+
+        $order = wc_get_order($order->get_id());
+
+        $this->assertSame('on-hold', $order->get_status());
+        $this->assertSame(35.15, (float) $order->get_total());
+        $this->assertSame([], Orders::lines($order));
+        $this->assertTrue($order->needs_payment() || $order->has_status('on-hold'));
+        $this->assertSame(0.0, $this->balance($card));
+    }
+
+    /**
+     * Two cards paid; one is still good when the order is reopened. The
+     * order keeps what it could take and owes exactly the rest.
+     */
+    public function test_a_partly_successful_re_debit_keeps_the_paid_card_and_drops_the_other(): void
+    {
+        $customerId = $this->customer();
+        $kept = $this->storeCredit($customerId, 30, ['expires_at' => time() + 10 * DAY_IN_SECONDS]);
+        $lost = $this->storeCredit($customerId, 40, ['expires_at' => time() + 20 * DAY_IN_SECONDS]);
+
+        $this->actAs($customerId);
+        WC()->cart->add_to_cart($this->product()->get_id());
+        $order = $this->placeOrder();
+
+        $this->assertSame(119.0, (float) $order->get_total());
+
+        $order->update_status('cancelled');
+        $this->cards->debit($lost->id, 15);
+        wc_get_order($order->get_id())->update_status('processing');
+
+        $order = wc_get_order($order->get_id());
+
+        $this->assertSame('on-hold', $order->get_status());
+        $this->assertSame(159.0, (float) $order->get_total());
+        $this->assertSame([$kept->id], array_column(Orders::lines($order), 'card_id'));
+        $this->assertSame([$kept->id => 30.0], Orders::heldLines($order));
+        $this->assertSame(0.0, $this->balance($kept));
+        $this->assertSame(25.0, $this->balance($lost));
+        $this->assertSame(189.0, round((float) $order->get_total() + Orders::applied($order), 2));
+
+        // Cancelled again, it returns only what it actually holds.
+        $order->update_status('cancelled');
+
+        $this->assertSame(30.0, $this->balance($kept));
+        $this->assertSame(25.0, $this->balance($lost));
+    }
+
+    /**
+     * The list remembers orders, not whether they were abandoned. One that
+     * has been paid, or is waiting for a bank transfer, is not abandoned.
+     */
+    public function test_a_paid_or_on_hold_order_still_in_the_session_list_is_left_alone(): void
+    {
+        foreach (['on-hold', 'processing', 'completed'] as $status) {
+            [$order, $card] = $this->orderPaidPartlyWithStoreCredit(50);
+            $order->update_status($status);
+
+            $this->assertContains($order->get_id(), WC()->session->get(Orders::SESSION_ORDERS));
+
+            WC()->cart->empty_cart();
+            WC()->cart->add_to_cart($this->product(29)->get_id());
+            $second = $this->placeOrder();
+
+            $first = wc_get_order($order->get_id());
+
+            $this->assertSame($status, $first->get_status());
+            $this->assertSame(50.0, Orders::held($first), $status);
+            $this->assertSame(0.0, $this->balance($card), $status);
+            $this->assertSame(29.0, (float) $second->get_total(), $status);
+        }
+    }
+
+    /**
+     * Marked refunded by mistake and set back to processing: the balance
+     * went back to the card, so the order has to take it again.
+     */
+    public function test_an_order_reopened_after_being_marked_refunded_takes_the_balance_again(): void
+    {
+        [$order, $card] = $this->orderPaidPartlyWithStoreCredit(50);
+        $order->update_status('processing');
+        $order->update_status('refunded');
+
+        $this->assertSame(50.0, $this->balance($card));
+
+        wc_get_order($order->get_id())->update_status('processing');
+
+        $order = wc_get_order($order->get_id());
+
+        $this->assertSame('processing', $order->get_status());
+        $this->assertSame(0.0, $this->balance($card));
+        $this->assertSame(50.0, Orders::held($order));
+        $this->assertSame(
+            [CardRepository::TX_ISSUE, CardRepository::TX_DEBIT, CardRepository::TX_REFUND, CardRepository::TX_DEBIT],
+            $this->ledgerTypes($card)
+        );
+    }
+
+    /**
+     * Order tables announce a trashed order twice: through the trash hook
+     * and as a change of status. Twice told, once returned — and the same
+     * coming back.
+     */
+    public function test_trashing_and_restoring_twice_moves_the_balance_once_each_time(): void
+    {
+        [$order, $card] = $this->orderPaidPartlyWithStoreCredit(50);
+        $order->update_status('processing');
+        $orderId = $order->get_id();
+
+        $expected = [CardRepository::TX_ISSUE, CardRepository::TX_DEBIT];
+
+        foreach ([1, 2] as $round) {
+            wc_get_order($orderId)->delete(false);
+            $expected[] = CardRepository::TX_RELEASE;
+
+            $this->assertSame(50.0, $this->balance($card), "Trash {$round}");
+            $this->assertSame($expected, $this->ledgerTypes($card), "Trash {$round}");
+
+            $this->untrash(wc_get_order($orderId));
+            $expected[] = CardRepository::TX_DEBIT;
+
+            $this->assertSame(0.0, $this->balance($card), "Restore {$round}");
+            $this->assertSame($expected, $this->ledgerTypes($card), "Restore {$round}");
+            $this->assertSame('processing', wc_get_order($orderId)->get_status());
+        }
+    }
+
+    /**
+     * Restored from the trash after the customer spent what came back: the
+     * same rule as any reopened order that falls short.
+     */
+    public function test_an_order_restored_from_the_trash_without_its_balance_is_put_on_hold(): void
+    {
+        [$order, $card] = $this->orderPaidPartlyWithStoreCredit(50);
+        $order->update_status('processing');
+        $orderId = $order->get_id();
+
+        wc_get_order($orderId)->delete(false);
+        $this->cards->debit($card->id, 50);
+        $this->untrash(wc_get_order($orderId));
+
+        $this->assertSame('on-hold', wc_get_order($orderId)->get_status());
+        $this->assertSame(0.0, $this->balance($card));
+    }
+
+    /**
+     * Two gift cards and a store credit on one order: two kinds, two rows,
+     * and the rows add up to what was taken off the total.
+     */
+    public function test_an_order_paid_with_several_cards_of_both_kinds_adds_them_up_per_kind(): void
+    {
+        $customerId = $this->customer();
+        $this->storeCredit($customerId, 15.5);
+        $first = $this->giftCard(20);
+        $second = $this->giftCard(30.25);
+
+        $this->actAs($customerId);
+        WC()->cart->add_to_cart($this->product()->get_id());
+        $this->cart()->applyCode($first->code);
+        $this->cart()->applyCode($second->code);
+
+        $order = $this->placeOrder();
+        $rows = $order->get_order_item_totals();
+
+        $this->assertSame(['giftcard' => 50.25, 'store_credit' => 15.5], Orders::byType(Orders::lines($order)));
+        $this->assertSame(65.75, Orders::applied($order));
+        $this->assertSame(123.25, (float) $order->get_total());
+        $this->assertStringContainsString('50', wp_strip_all_tags($rows['store_balance_giftcard']['value']));
+        $this->assertStringContainsString('25', wp_strip_all_tags($rows['store_balance_giftcard']['value']));
+        $this->assertStringContainsString('15', wp_strip_all_tags($rows['store_balance_store_credit']['value']));
+        $this->assertSame([], Orders::byType([]));
+        $this->assertSame(['store_credit' => 5.0], Orders::byType([['type' => 'store_credit', 'amount' => 5], ['type' => 'voucher', 'amount' => 9]]));
     }
 }

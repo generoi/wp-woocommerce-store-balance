@@ -323,10 +323,10 @@ class Orders implements Module
             // HPOS trashes and restores an order as a change of status.
             if (in_array($to, self::RELEASE_STATUSES, true) || $to === 'trash') {
                 if ($state === self::STATE_DEBITED) {
-                    $this->release($order, sprintf(
+                    $this->release($order, $to === 'trash' ? __('Order removed', 'wp-woocommerce-store-balance') : sprintf(
                         /* translators: %s: order status */
                         __('Order %s', 'wp-woocommerce-store-balance'),
-                        wc_get_order_status_name($to)
+                        strtolower(wc_get_order_status_name($to))
                     ), $to === 'refunded' ? CardRepository::TX_REFUND : CardRepository::TX_RELEASE);
                 }
 
@@ -471,16 +471,28 @@ class Orders implements Module
                 continue;
             }
 
-            if ($cards->debit((int) $line['card_id'], $amount, ['order_id' => $order->get_id(), 'note' => 'Order reopened'])) {
+            if ($cards->debit((int) $line['card_id'], $amount, ['order_id' => $order->get_id(), 'note' => __('Order reopened', 'wp-woocommerce-store-balance')])) {
                 $line['restored'] = 0.0;
             } else {
+                // That part is not paid from a balance after all. Taken off
+                // the line, so the order's total goes up by it: the amount
+                // due is on the order itself, not only in a note.
                 $short += $amount;
+                $line['amount'] = Money::round($line['amount'] - $amount);
+                $line['restored'] = 0.0;
             }
         }
         unset($line);
 
+        $lines = array_values(array_filter($lines, static fn (array $line): bool => $line['amount'] > 0));
+
         $order->update_meta_data(self::META_LINES, $lines);
         $order->update_meta_data(self::META_STATE, self::STATE_DEBITED);
+
+        if ($short > 0) {
+            $order->set_total(wc_format_decimal(Money::round((float) $order->get_total() + $short)));
+        }
+
         $order->save();
 
         if ($short > 0) {
@@ -490,7 +502,7 @@ class Orders implements Module
             // not there. A person decides what happens next.
             $order->update_status('on-hold', sprintf(
                 /* translators: %s: amount */
-                __('This order was reopened, but %s of the gift card / store credit it was paid with has been spent elsewhere. That amount is unpaid: collect it or cancel the order.', 'wp-woocommerce-store-balance'),
+                __('This order was reopened, but %s of the gift card / store credit it was paid with has been spent elsewhere. That amount has been added back to the order total and is unpaid: collect it or cancel the order.', 'wp-woocommerce-store-balance'),
                 Money::plain($short, $order->get_currency())
             ));
         }

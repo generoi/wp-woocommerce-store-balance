@@ -10,6 +10,10 @@
     opacity: 0.75;
 }
 
+.store-balance__hint[hidden] {
+    display: none;
+}
+
 .store-balance__optional {
     font-weight: normal;
     opacity: 0.7;
@@ -38,6 +42,7 @@
     display: flex;
     flex-wrap: wrap;
     gap: 0.5em;
+    margin-bottom: 1em;
 }
 
 .store-balance-gift-card__choice {

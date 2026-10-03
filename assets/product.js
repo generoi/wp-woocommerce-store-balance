@@ -14,11 +14,23 @@
      * The same reading of a typed amount as the server: spaces and a currency
      * sign are ignored, a comma is a decimal point.
      */
-    function parseAmount(value) {
-        var cleaned = String(value)
-            .replace(/[\s  ]/g, '')
-            .replace(/^(?:[€$£¥]|[A-Za-z]{2,3}\.?)|(?:[€$£¥]|[A-Za-z]{2,3}\.?)$/g, '')
-            .replace(',', '.');
+    function parseAmount(value, signs) {
+        var cleaned = String(value).replace(/[\s\u00A0\u202F]/g, '');
+
+        // The shop's own currency sign or code, before or after the number.
+        // Only its own: "$50" in a euro shop is not fifty euros.
+        (signs || []).forEach(function (sign) {
+            var lower = cleaned.toLowerCase();
+            var s = String(sign || '').toLowerCase();
+
+            if (s && lower.indexOf(s) === 0) {
+                cleaned = cleaned.slice(s.length);
+            } else if (s && lower.length > s.length && lower.lastIndexOf(s) === lower.length - s.length) {
+                cleaned = cleaned.slice(0, -s.length);
+            }
+        });
+
+        cleaned = cleaned.replace(',', '.');
 
         return /^\d+(\.\d{0,2})?$/.test(cleaned) ? parseFloat(cleaned) : NaN;
     }
@@ -46,7 +58,7 @@
             var message = '';
 
             if (isCustom() && input.value.trim() !== '') {
-                var amount = parseAmount(input.value);
+                var amount = parseAmount(input.value, [input.dataset.currency, input.dataset.symbol]);
 
                 if (isNaN(amount)) {
                     message = input.dataset.numberMessage || '';
@@ -114,11 +126,12 @@
 
             notices.scrollIntoView({ block: 'center' });
 
-            // After the theme's own scripts have settled: some of them move
-            // focus to the notice themselves.
+            // After WooCommerce's own script, which moves focus to the notice
+            // half a second after the page loads. The notice says what is
+            // wrong; the field is where it gets put right.
             window.setTimeout(function () {
                 (invalid || notices).focus({ preventScroll: true });
-            }, 50);
+            }, 650);
 
             // A gift card was added. The form came back empty; the quantity
             // should too, or the next one is bought twice by accident.

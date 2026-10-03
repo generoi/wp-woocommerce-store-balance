@@ -705,4 +705,17 @@ class GiftCardProductTest extends TestCase
         $this->assertSame(10.0, (float) $product->get_price());
         $this->assertSame((float) $product->get_price(), (float) $product->get_regular_price());
     }
+
+    /**
+     * A list as people really type it: a semicolon here, a comma with the
+     * space on the wrong side there.
+     */
+    public function test_a_list_with_mixed_separators_is_three_amounts(): void
+    {
+        $parsed = GiftCardProduct::parseAmounts('25; 50 ,100');
+
+        $this->assertSame([25.0, 50.0, 100.0], $parsed['amounts']);
+        $this->assertSame([], $parsed['rejected']);
+        $this->assertSame([12.5, 25.0, 50.0], GiftCardProduct::parseAmounts('25; 12,50; 50')['amounts']);
+    }
 }

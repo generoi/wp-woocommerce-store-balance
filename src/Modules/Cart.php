@@ -382,10 +382,14 @@ class Cart implements Module
         }
 
         $held = [];
-        $orderIds = array_unique(array_filter([
-            absint(WC()->session->get('order_awaiting_payment')),
-            absint(WC()->session->get('store_api_draft_order')),
-        ]));
+        // WooCommerce's keys point at the newest order only; the plugin's own
+        // list also knows the ones before it.
+        $remembered = WC()->session->get(Orders::SESSION_ORDERS, []);
+
+        $orderIds = array_unique(array_filter(array_map('absint', array_merge(
+            is_array($remembered) ? $remembered : [],
+            [WC()->session->get('order_awaiting_payment'), WC()->session->get('store_api_draft_order')]
+        ))));
 
         foreach ($orderIds as $orderId) {
             $order = wc_get_order($orderId);
