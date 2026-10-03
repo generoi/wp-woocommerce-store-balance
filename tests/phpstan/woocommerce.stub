@@ -1,0 +1,19 @@
+<?php
+
+/**
+ * The WooCommerce stubs type these as always set. They are not: there is no
+ * cart or session in the admin, in cron or in most REST requests, and every
+ * guard in this plugin that checks for them is there for that reason.
+ */
+class WooCommerce
+{
+    /** @var \WC_Cart|null */
+    public $cart;
+
+    /** @var \WC_Session|null */
+    public $session;
+}
+
+class WC_Cart {}
+
+abstract class WC_Session {}

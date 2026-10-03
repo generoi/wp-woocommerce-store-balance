@@ -1,0 +1,18 @@
+includes:
+    - vendor/szepeviktor/phpstan-wordpress/extension.neon
+
+parameters:
+    level: 5
+    paths:
+        - src
+        - wp-woocommerce-store-balance.php
+    scanFiles:
+        - vendor/php-stubs/woocommerce-stubs/woocommerce-stubs.php
+        - tests/phpstan/functions.stub
+    stubFiles:
+        - tests/phpstan/woocommerce.stub
+    scanDirectories:
+        - templates
+    ignoreErrors:
+        # WooCommerce's stubs lag its blocks and Store API classes.
+        - '#Automattic\\WooCommerce\\(StoreApi|Blocks)\\#'

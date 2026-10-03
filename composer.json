@@ -1,0 +1,46 @@
+{
+    "name": "generoi/wp-woocommerce-store-balance",
+    "type": "wordpress-plugin",
+    "license": "MIT",
+    "description": "Gift cards and store credit for WooCommerce: one balance engine, spent after tax like a payment, locked to its currency",
+    "homepage": "https://github.com/generoi/wp-woocommerce-store-balance",
+    "authors": [
+        {
+            "name": "Genero",
+            "email": "info@genero.fi"
+        }
+    ],
+    "require": {
+        "php": ">=8.0.0"
+    },
+    "require-dev": {
+        "laravel/pint": "^1.17",
+        "php-stubs/woocommerce-stubs": "^10.0",
+        "phpstan/phpstan": "^2.2",
+        "phpunit/phpunit": "^9.0",
+        "szepeviktor/phpstan-wordpress": "^2.0",
+        "wp-phpunit/wp-phpunit": "^6.8",
+        "yoast/phpunit-polyfills": "^2.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "GeneroWP\\StoreBalance\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "GeneroWP\\StoreBalance\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "lint": "pint --test",
+        "lint:fix": "pint",
+        "test": "phpunit --testsuite unit",
+        "test:integration": "phpunit --testsuite integration",
+        "test:wp-env": "npx wp-env run tests-cli --env-cwd=wp-content/plugins/wp-woocommerce-store-balance php -d memory_limit=1024M vendor/bin/phpunit --testsuite integration",
+        "stan": "./vendor/bin/phpstan analyse --memory-limit=4G"
+    },
+    "config": {
+        "sort-packages": true
+    }
+}

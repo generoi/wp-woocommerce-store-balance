@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  static:
+    runs-on: ubuntu-latest
+    # Lint, static analysis and the unit suite; none of it boots WordPress.
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+
+      - run: composer install --no-interaction --prefer-dist
+
+      - name: Lint
+        run: composer lint
+
+      - name: Static analysis
+        run: composer stan
+
+      - name: Unit tests
+        run: composer test

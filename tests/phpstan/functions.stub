@@ -1,0 +1,32 @@
+<?php
+
+/**
+ * Functions PHPStan cannot see: Action Scheduler ships inside WooCommerce's
+ * packages, and the Store API helpers are missing from the WooCommerce stubs.
+ */
+
+/**
+ * @param  array<int, mixed>  $args
+ * @return int|bool
+ */
+function as_next_scheduled_action(string $hook, array $args = [], string $group = '') {}
+
+/**
+ * @param  array<int, mixed>  $args
+ */
+function as_schedule_single_action(int $timestamp, string $hook, array $args = [], string $group = '', bool $unique = false, int $priority = 10): int {}
+
+/**
+ * @param  array<string, mixed>  $args
+ */
+function woocommerce_store_api_register_endpoint_data(array $args): bool|\WP_Error {}
+
+/**
+ * @param  array<string, mixed>  $args
+ */
+function woocommerce_store_api_register_update_callback(array $args): bool|\WP_Error {}
+
+/**
+ * @return object
+ */
+function woocommerce_store_api_get_formatter(string $name) {}

@@ -1,0 +1,14 @@
+{
+    "name": "wp-woocommerce-store-balance",
+    "private": true,
+    "scripts": {
+        "env:start": "wp-env start",
+        "env:stop": "wp-env stop",
+        "test:php": "wp-env run tests-cli --env-cwd=wp-content/plugins/wp-woocommerce-store-balance php -d memory_limit=1024M vendor/bin/phpunit --testsuite integration",
+        "test:e2e": "playwright test"
+    },
+    "devDependencies": {
+        "@playwright/test": "^1.49.0",
+        "@wordpress/env": "^10.14.0"
+    }
+}

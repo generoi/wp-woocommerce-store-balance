@@ -1,0 +1,102 @@
+/*
+ * Cart and checkout blocks. Built on WooCommerce's own totals classes so the
+ * rows line up with the ones around them; only what those classes do not cover
+ * is styled here.
+ */
+
+.wc-store-balance-form__row {
+    margin: 0;
+}
+
+.wc-store-balance-form__input input {
+    text-transform: uppercase;
+}
+
+.wc-store-balance-form__input.has-error input {
+    border-color: #cc1818;
+}
+
+.wc-store-balance__error {
+    margin: 8px 0 0;
+    color: #cc1818;
+    font-size: 0.875em;
+}
+
+.wc-store-balance__note {
+    margin: 8px 0 0;
+    font-size: 0.875em;
+    opacity: 0.8;
+}
+
+.wc-store-balance__note.is-success {
+    opacity: 1;
+    font-weight: 600;
+}
+
+.wc-store-balance-form__codes {
+    margin: 12px 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.wc-store-balance-form__code {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 8px 12px;
+    margin-top: 6px;
+    border-radius: 4px;
+    background: color-mix(in srgb, currentColor 7%, transparent);
+}
+
+.wc-store-balance-form__code-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.wc-store-balance-form__code-name {
+    font-weight: 600;
+}
+
+.wc-store-balance-form__code-detail {
+    font-size: 0.875em;
+    opacity: 0.8;
+}
+
+.wc-store-balance-form__code.has-reason .wc-store-balance-form__code-detail {
+    color: #cc1818;
+    opacity: 1;
+}
+
+.wc-store-balance-form__remove {
+    flex: 0 0 auto;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    font-size: 0.875em;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.wc-store-balance-summary__toggle-label {
+    display: block;
+}
+
+.wc-store-balance-summary__detail {
+    display: block;
+    font-size: 0.875em;
+    opacity: 0.8;
+}
+
+.wc-store-balance-summary__account + .wc-store-balance-summary__applied,
+.wc-store-balance__note + .wc-store-balance-summary__applied {
+    margin-top: 12px;
+}
+
+.wc-store-balance-summary__applied .wc-block-components-totals-item__value {
+    white-space: nowrap;
+}
