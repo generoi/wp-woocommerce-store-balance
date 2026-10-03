@@ -2,12 +2,12 @@
 
 Gift cards and store credit for WooCommerce, on one balance engine.
 
-A gift card and a store credit are the same thing with a different origin: a balance in one currency that is spent like money. A gift card is bought and carries a code that can be passed on. Store credit is put on a customer's account, by a refund or by an admin, and has no code.
+A gift card and a store credit are the same thing with a different origin: a balance in one currency that is spent like money. A gift card is bought and carries a code that can be passed on. Store credit is put on a customer's account by the shop, and has no code.
 
 ## What it does
 
 - **Gift cards** sold as a product: preset amounts, an optional custom amount, a recipient, a message and a delivery date. The card is emailed to the recipient.
-- **Store credit** on a customer account: added by an admin, or given instead of money back when an order is refunded.
+- **Store credit** on a customer account, added by an admin.
 - **Spent at checkout like a payment.** The balance is taken off the finished total, after tax, shipping and coupons, so the VAT on the order does not change. Partial use leaves the rest on the card.
 - **An account balance.** A gift card can be added to an account once and is then used at checkout automatically, with no code to type. Store credit always works that way.
 - **A ledger.** Every change to a balance is a transaction row: issued, used, returned, refunded, adjusted.
@@ -16,7 +16,7 @@ A gift card and a store credit are the same thing with a different origin: a bal
 
 ## Why after tax
 
-A gift card that can be spent on anything is a multi-purpose voucher: no VAT is due when it is sold, and the full VAT is due on the goods when it is spent. Store credit from a return is money the shop owes the customer. Neither is a discount.
+A gift card that can be spent on anything is a multi-purpose voucher: no VAT is due when it is sold, and the full VAT is due on the goods when it is spent. Store credit is money the shop owes the customer. Neither is a discount.
 
 A coupon lowers the price, and with it the VAT. Paying with a balance must not. That is why this is not built on coupons, and why a gift card product is forced to tax status "none" whatever its settings say.
 
@@ -48,8 +48,6 @@ The card is created when the order is paid and emailed to the recipient, right a
 
 **WooCommerce → Store balance → Add store credit** puts credit on a customer account. The customer gets an email with the amount and no code.
 
-On an order's edit screen, the **Store credit** box refunds the order, or part of it, to the customer as store credit. Nothing is sent to the payment provider. A guest order gets a customer account to hold the credit.
-
 ### For the customer
 
 My Account gets two pages, **Gift cards** and **Store credit**. Each shows the balance, the cards and their history. Gift cards also has a form to add a code to the account.
@@ -60,7 +58,7 @@ When the balance is larger than the order, the card that expires soonest is used
 
 ## Several currencies
 
-Each card has a currency: the currency of the order that bought or refunded it, or the one chosen when it was created by hand. It is only offered, and only accepted, when the cart is in that currency. The plugin reads `get_woocommerce_currency()` and nothing else, so it works with whatever sets the currency.
+Each card has a currency: the currency of the order that bought it, or the one chosen when it was created by hand. It is only offered, and only accepted, when the cart is in that currency. The plugin reads `get_woocommerce_currency()` and nothing else, so it works with whatever sets the currency.
 
 There is no conversion between currencies.
 
@@ -84,14 +82,11 @@ $card = wc_store_balance_issue_store_credit($customerId, 25.00, 'EUR', [
     'order_id' => $order->get_id(),
 ]);
 
-// Refund an order to store credit, in the order's currency.
-$card = wc_store_balance_refund_order_to_store_credit($order, 49.90, 'Returned');
-
 // What a customer can spend.
 $balance = wc_store_balance_get_customer_balance($customerId, 'EUR');
 ```
 
-The first two return the card, or a `WP_Error`.
+The first returns the card, or a `WP_Error`.
 
 ### Filters
 
@@ -111,7 +106,6 @@ The first two return the card, or a `WP_Error`.
 | Action | When |
 | --- | --- |
 | `wc_store_balance_card_created` | A gift card or store credit has been created. |
-| `wc_store_balance_order_refunded_to_store_credit` | An order has been refunded to store credit. |
 
 ### Templates
 
@@ -152,6 +146,7 @@ The scripts in `assets/` are written against the globals WooCommerce exposes and
 
 ## Not in this version
 
+- Returns. Refunding an order as store credit is left to whatever handles returns; it can call `wc_store_balance_issue_store_credit()`.
 - Conversion between currencies.
 - Partial refund of a gift card line: the card is only deactivated when the whole order is cancelled or refunded.
 - Import of balances from another system.
