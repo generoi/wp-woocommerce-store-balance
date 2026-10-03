@@ -41,6 +41,9 @@
         "stan": "./vendor/bin/phpstan analyse --memory-limit=4G"
     },
     "config": {
-        "sort-packages": true
+        "sort-packages": true,
+        "platform": {
+            "php": "8.3"
+        }
     }
 }
