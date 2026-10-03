@@ -1,9 +1,9 @@
 /**
  * Gift cards and store credit in the cart and checkout blocks.
  *
- * Two pieces, both rendered into slots WooCommerce provides in the order
- * summary: a form to enter a gift card code, next to the coupon form, and a
- * summary of what the balance pays for, above the total.
+ * Two pieces, both rendered into the discounts slot of the order summary, next
+ * to the coupon form: a form to enter a gift card code, and a summary of what
+ * the balance pays for.
  *
  * Written against the globals WooCommerce ships (wp.element, wc.blocksCheckout)
  * so there is no build step. `el` is React.createElement.
@@ -27,6 +27,7 @@
     var settings = (wc.wcSettings && wc.wcSettings.getSetting('wc-store-balance_data', {})) || {};
     var strings = settings.strings || {};
     var NAMESPACE = settings.namespace || 'wc-store-balance';
+    var INPUT_ID = 'wc-store-balance-code';
 
     function t(key) {
         return strings[key] || '';
@@ -43,10 +44,14 @@
         });
     }
 
-    function speak(message) {
+    function speak(message, assertive) {
         if (wp.a11y && wp.a11y.speak && message) {
-            wp.a11y.speak(message, 'polite');
+            wp.a11y.speak(message, assertive ? 'assertive' : 'polite');
         }
+    }
+
+    function int(value) {
+        return parseInt(value, 10) || 0;
     }
 
     /**
@@ -88,6 +93,21 @@
     }
 
     /**
+     * After the cart has been redrawn. Nothing in the form is ever `disabled`
+     * while a request runs — a disabled element drops keyboard focus to the
+     * top of the page — so the field is still there to return to.
+     */
+    function focusInput() {
+        window.setTimeout(function () {
+            var field = document.getElementById(INPUT_ID);
+
+            if (field) {
+                field.focus();
+            }
+        }, 0);
+    }
+
+    /**
      * The code form. Sits with the coupon form, because that is where a
      * customer with a code in hand looks.
      */
@@ -112,12 +132,10 @@
             }
         }
 
-        function focusInput() {
-            var field = document.getElementById('wc-store-balance-code');
-
-            if (field) {
-                field.focus();
-            }
+        function fail(message) {
+            error[1](message);
+            speak(message, true);
+            focusInput();
         }
 
         function apply(event) {
@@ -128,9 +146,7 @@
             }
 
             if (!code[0].trim()) {
-                error[1](t('emptyCode'));
-
-                focusInput();
+                fail(t('emptyCode'));
 
                 return;
             }
@@ -142,11 +158,10 @@
                 .then(function () {
                     code[1]('');
                     speak(t('applied'));
+                    focusInput();
                 })
                 .catch(function (e) {
-                    error[1](errorMessage(e));
-
-                    focusInput();
+                    fail(errorMessage(e));
                 })
                 .finally(function () {
                     busy[1](false);
@@ -154,14 +169,19 @@
         }
 
         function remove(id) {
+            if (busy[0]) {
+                return;
+            }
+
             busy[1](true);
 
             update({ action: 'remove', id: id })
                 .then(function () {
                     speak(t('removed'));
+                    focusInput();
                 })
                 .catch(function (e) {
-                    error[1](errorMessage(e));
+                    fail(errorMessage(e));
                 })
                 .finally(function () {
                     busy[1](false);
@@ -178,25 +198,25 @@
                     { className: 'wc-block-components-totals-coupon__form wc-store-balance-form__row', onSubmit: apply, noValidate: true },
                     TextInput
                         ? el(TextInput, {
-                            id: 'wc-store-balance-code',
+                            id: INPUT_ID,
                             className: 'wc-block-components-totals-coupon__input wc-store-balance-form__input' + (error[0] ? ' has-error' : ''),
                             label: t('inputLabel'),
                             value: code[0],
-                            disabled: busy[0],
                             autoComplete: 'off',
                             autoCapitalize: 'characters',
                             ariaDescribedBy: error[0] ? 'wc-store-balance-error' : undefined,
+                            'aria-invalid': error[0] ? 'true' : undefined,
                             onChange: setCode,
                         })
                         : el('input', {
-                            id: 'wc-store-balance-code',
+                            id: INPUT_ID,
                             type: 'text',
                             className: 'wc-store-balance-form__input',
                             value: code[0],
                             'aria-label': t('inputLabel'),
+                            'aria-invalid': error[0] ? 'true' : undefined,
                             placeholder: t('inputLabel'),
                             autoComplete: 'off',
-                            disabled: busy[0],
                             onChange: function (event) {
                                 setCode(event.target.value);
                             },
@@ -207,11 +227,11 @@
                             {
                                 className: 'wc-block-components-totals-coupon__button wc-store-balance-form__button',
                                 type: 'submit',
-                                disabled: busy[0],
+                                'aria-disabled': busy[0] ? 'true' : undefined,
                             },
                             busy[0] ? t('applying') : t('apply')
                         )
-                        : el('button', { type: 'submit', className: 'wp-element-button', disabled: busy[0] }, t('apply'))
+                        : el('button', { type: 'submit', className: 'wp-element-button', 'aria-disabled': busy[0] ? 'true' : undefined }, t('apply'))
                 ),
             error[0]
                 ? el('p', { id: 'wc-store-balance-error', className: 'wc-store-balance__error', role: 'alert' }, error[0])
@@ -221,14 +241,12 @@
                     'ul',
                     { className: 'wc-store-balance-form__codes' },
                     codes.map(function (line) {
-                        var used = parseInt(line.amount, 10) || 0;
-                        var available = parseInt(line.available, 10) || 0;
+                        var used = int(line.amount);
+                        var available = int(line.available);
                         var detail = line.reason
                             ? line.reason
                             : used > 0
-                                ? used < available
-                                    ? sprintf(t('remaining'), balance.format(available - used))
-                                    : ''
+                                ? sprintf(t('usedLeft'), balance.format(used), balance.format(available - used))
                                 : t('notUsed');
 
                         return el(
@@ -238,14 +256,13 @@
                                 'span',
                                 { className: 'wc-store-balance-form__code-text' },
                                 el('span', { className: 'wc-store-balance-form__code-name' }, sprintf(t('giftCard'), line.masked)),
-                                detail ? el('span', { className: 'wc-store-balance-form__code-detail' }, detail) : null
+                                el('span', { className: 'wc-store-balance-form__code-detail' }, detail)
                             ),
                             el(
                                 'button',
                                 {
                                     type: 'button',
                                     className: 'wc-store-balance-form__remove',
-                                    disabled: busy[0],
                                     'aria-label': sprintf(t('remove'), line.masked),
                                     onClick: function () {
                                         remove(line.id);
@@ -282,7 +299,7 @@
 
     /**
      * What the balance does to this order: the account balance switch, and the
-     * amount taken off, right above the total it reduces.
+     * amounts taken off, above the total they reduce.
      */
     function Summary(props) {
         var balance = useBalance(props);
@@ -294,69 +311,84 @@
         }
 
         var account = data.account || {};
-        var available = parseInt(account.available, 10) || 0;
-        var giftCards = parseInt(account.gift_cards, 10) || 0;
-        var storeCredit = parseInt(account.store_credit, 10) || 0;
-        var applied = parseInt(data.applied_total, 10) || 0;
-        var toPay = parseInt(balance.totals.total_price, 10) || 0;
+        var available = int(account.available);
+        var used = int(account.used);
+        var giftCards = int(account.gift_cards);
+        var storeCredit = int(account.store_credit);
+        var applied = int(data.applied_total);
+        var excluded = int(data.excluded_total);
+        var toPay = int(balance.totals.total_price);
         var other = account.other_currencies || [];
+        var rows = data.rows || [];
         var children = [];
 
+        function toggle(checked) {
+            if (busy[0]) {
+                return;
+            }
+
+            busy[1](true);
+
+            update({ action: 'use_balance', value: checked })
+                .then(function () {
+                    speak(checked ? t('balanceOn') : t('balanceOff'));
+                })
+                .finally(function () {
+                    busy[1](false);
+                });
+        }
+
         if (available > 0 && !data.only_gift_cards) {
+            var details = [];
+
+            if (giftCards > 0 && storeCredit > 0) {
+                details.push(sprintf(t('breakdown'), balance.format(giftCards), balance.format(storeCredit)));
+            }
+
+            if (data.use_balance && used > 0) {
+                details.push(sprintf(t('accountUsedLeft'), balance.format(used), balance.format(available - used)));
+            } else if (data.use_balance) {
+                details.push(t('accountNotNeeded'));
+            } else {
+                details.push(t('accountSaved'));
+            }
+
+            var label = el(
+                'span',
+                null,
+                el('span', { className: 'wc-store-balance-summary__toggle-label' }, sprintf(t('useBalance'), balance.format(available))),
+                details.map(function (detail, index) {
+                    return el('span', { key: index, className: 'wc-store-balance-summary__detail' }, detail);
+                })
+            );
+
             children.push(
                 el(
                     'div',
                     { key: 'account', className: 'wc-store-balance-summary__account' },
-                    (function () {
-                        var label = el(
-                            'span',
-                            null,
-                            el('span', { className: 'wc-store-balance-summary__toggle-label' }, sprintf(t('useBalance'), balance.format(available))),
-                            giftCards > 0 && storeCredit > 0
-                                ? el(
-                                    'span',
-                                    { className: 'wc-store-balance-summary__detail' },
-                                    sprintf(t('breakdown'), balance.format(giftCards), balance.format(storeCredit))
-                                )
-                                : null
-                        );
-
-                        function toggle(checked) {
-                            busy[1](true);
-
-                            update({ action: 'use_balance', value: checked }).finally(function () {
-                                busy[1](false);
-                            });
-                        }
-
-                        if (CheckboxControl) {
-                            return el(
-                                CheckboxControl,
-                                {
-                                    id: 'wc-store-balance-use',
-                                    className: 'wc-store-balance-summary__toggle',
-                                    checked: !!data.use_balance,
-                                    disabled: busy[0],
-                                    onChange: toggle,
-                                },
-                                label
-                            );
-                        }
-
-                        return el(
+                    CheckboxControl
+                        ? el(
+                            CheckboxControl,
+                            {
+                                id: 'wc-store-balance-use',
+                                className: 'wc-store-balance-summary__toggle',
+                                checked: !!data.use_balance,
+                                onChange: toggle,
+                            },
+                            label
+                        )
+                        : el(
                             'label',
                             { className: 'wc-store-balance-summary__toggle' },
                             el('input', {
                                 type: 'checkbox',
                                 checked: !!data.use_balance,
-                                disabled: busy[0],
                                 onChange: function (event) {
                                     toggle(event.target.checked);
                                 },
                             }),
                             label
-                        );
-                    })()
+                        )
                 )
             );
         }
@@ -371,29 +403,47 @@
             );
         }
 
-        if (applied > 0) {
+        // One row per kind of balance, so a gift card and store credit used
+        // together are not folded into a figure nobody can check.
+        rows.forEach(function (row, index) {
+            var amount = int(row.amount);
+
             children.push(
                 TotalsItem
                     ? el(TotalsItem, {
-                        key: 'applied',
+                        key: 'row-' + index,
                         className: 'wc-store-balance-summary__applied',
-                        label: data.label,
-                        value: -applied,
+                        label: row.label,
+                        value: -amount,
                         currency: balance.currency,
                     })
                     : el(
                         'div',
-                        { key: 'applied', className: 'wc-block-components-totals-item wc-store-balance-summary__applied' },
-                        el('span', { className: 'wc-block-components-totals-item__label' }, data.label),
-                        el('span', { className: 'wc-block-components-totals-item__value' }, '\u2212' + balance.format(applied))
+                        { key: 'row-' + index, className: 'wc-block-components-totals-item wc-store-balance-summary__applied' },
+                        el('span', { className: 'wc-block-components-totals-item__label' }, row.label),
+                        el('span', { className: 'wc-block-components-totals-item__value' }, '−' + balance.format(amount))
                     )
             );
+        });
 
-            if (toPay === 0) {
-                children.push(
-                    el('div', { key: 'covered', className: 'wc-block-components-totals-item wc-store-balance__note is-success' }, el('span', null, t('fullyCovered')))
-                );
-            }
+        if (applied > 0 && excluded > 0 && !data.only_gift_cards) {
+            children.push(
+                el(
+                    'div',
+                    { key: 'excluded', className: 'wc-block-components-totals-item wc-store-balance__note' },
+                    el('span', null, sprintf(t('excluded'), balance.format(excluded)))
+                )
+            );
+        }
+
+        if (applied > 0 && toPay === 0) {
+            children.push(
+                el(
+                    'div',
+                    { key: 'covered', className: 'wc-block-components-totals-item wc-store-balance__note is-success' },
+                    el('span', null, t('covered_' + (data.kind || 'both')) || t('covered_both'))
+                )
+            );
         }
 
         if (!children.length) {
@@ -412,4 +462,22 @@
             return el(checkout.ExperimentalDiscountsMeta, null, el(CodeForm), el(Summary));
         },
     });
+
+    /**
+     * The total is no longer the price of the order once a balance has paid
+     * part of it: it is what is left. Said so wherever the total is printed —
+     * including the collapsed summary at the top of the mobile checkout, which
+     * has no room for the rows above.
+     */
+    var registerFilters = checkout.registerCheckoutFilters || checkout.__experimentalRegisterCheckoutFilters;
+
+    if (registerFilters) {
+        registerFilters(NAMESPACE, {
+            totalLabel: function (label, extensions) {
+                var data = extensions && extensions[NAMESPACE];
+
+                return data && int(data.applied_total) > 0 ? t('toPay') : label;
+            },
+        });
+    }
 })(window.wp, window.wc);

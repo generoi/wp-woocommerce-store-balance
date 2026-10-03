@@ -4,9 +4,11 @@ namespace GeneroWP\StoreBalance\Modules;
 
 use GeneroWP\StoreBalance\Card;
 use GeneroWP\StoreBalance\Code;
+use GeneroWP\StoreBalance\Input;
 use GeneroWP\StoreBalance\Module;
 use GeneroWP\StoreBalance\Money;
 use GeneroWP\StoreBalance\Plugin;
+use GeneroWP\StoreBalance\Throttle;
 use WP_Error;
 
 /**
@@ -32,6 +34,7 @@ class Account implements Module
         add_action('woocommerce_account_'.self::ENDPOINT_STORE_CREDIT.'_endpoint', [$this, 'storeCreditPage']);
         add_action('template_redirect', [$this, 'handleRedeem']);
         add_action('wp_enqueue_scripts', [$this, 'assets']);
+        add_action('woocommerce_before_customer_login_form', [$this, 'loginNotice']);
     }
 
     /**
@@ -88,10 +91,25 @@ class Account implements Module
         }
     }
 
+    /**
+     * The link in the gift card email leads here. Someone who is not logged in
+     * gets a bare login form, with nothing to say why, or that an account is
+     * optional.
+     */
+    public function loginNotice(): void
+    {
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- only decides whether to show a notice.
+        if (empty($_GET['code']) || ! is_string($_GET['code']) || ! Code::isValid(wp_unslash($_GET['code']))) {
+            return;
+        }
+
+        wc_print_notice(__('Log in to save your gift card to your account. No account? You do not need one: enter the code in the cart or at checkout under "Have a gift card?".', 'wp-woocommerce-store-balance'), 'notice');
+    }
+
     public function giftCardsPage(): void
     {
         // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- only pre-fills a form field.
-        $code = isset($_GET['code']) ? Code::normalize(sanitize_text_field(wp_unslash($_GET['code']))) : '';
+        $code = isset($_GET['code']) && is_string($_GET['code']) ? Code::normalize(sanitize_text_field(wp_unslash($_GET['code']))) : '';
 
         Plugin::template('myaccount/balance.php', $this->pageArgs(Card::TYPE_GIFT_CARD) + [
             'prefill' => Code::isValid($code) ? Code::format($code) : '',
@@ -154,15 +172,19 @@ class Account implements Module
             exit;
         }
 
-        $result = $this->redeem(sanitize_text_field(wp_unslash($_POST['store_balance_redeem_code'])), get_current_user_id());
+        $result = $this->redeem(sanitize_text_field(Input::text(wp_unslash($_POST['store_balance_redeem_code']))), get_current_user_id());
 
         if (is_wp_error($result)) {
             wc_add_notice($result->get_error_message(), 'error');
         } else {
             wc_add_notice(sprintf(
-                /* translators: %s: amount */
-                __('Gift card added. %s is now in your account and will be used at checkout automatically.', 'wp-woocommerce-store-balance'),
-                wc_price($result->balance, ['currency' => $result->currency])
+                $result->currency === get_woocommerce_currency()
+                    /* translators: %s: amount */
+                    ? __('Gift card added. %s is now in your account and will be used at checkout automatically.', 'wp-woocommerce-store-balance')
+                    /* translators: 1: amount, 2: currency code */
+                    : __('Gift card added. %1$s is now in your account. It can be used for orders paid in %2$s.', 'wp-woocommerce-store-balance'),
+                wc_price($result->balance, ['currency' => $result->currency]),
+                $result->currency
             ), 'success');
         }
 
@@ -174,14 +196,30 @@ class Account implements Module
     {
         $cards = Plugin::getInstance()->cards();
 
+        if (Throttle::blocked()) {
+            return new WP_Error('wc_store_balance_throttled', __('Too many attempts. Please wait ten minutes and try again.', 'wp-woocommerce-store-balance'));
+        }
+
         if (trim($input) === '') {
             return new WP_Error('wc_store_balance_empty_code', __('Enter a gift card code.', 'wp-woocommerce-store-balance'));
         }
 
+        $result = $this->claim($input, $userId);
+
+        if (is_wp_error($result) && $result->get_error_code() !== 'wc_store_balance_in_account') {
+            Throttle::hit();
+        }
+
+        return $result;
+    }
+
+    protected function claim(string $input, int $userId): Card|WP_Error
+    {
+        $cards = Plugin::getInstance()->cards();
         $card = $cards->findByCode($input);
 
         if (! $card || ! $card->isGiftCard() || ! $card->isActive()) {
-            return new WP_Error('wc_store_balance_invalid_code', __('That code is not valid. Check it and try again.', 'wp-woocommerce-store-balance'));
+            return new WP_Error('wc_store_balance_invalid_code', __('We could not find that gift card code. Please check it and try again.', 'wp-woocommerce-store-balance'));
         }
 
         if ($card->customerId === $userId) {

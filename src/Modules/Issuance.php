@@ -3,8 +3,10 @@
 namespace GeneroWP\StoreBalance\Modules;
 
 use GeneroWP\StoreBalance\Card;
+use GeneroWP\StoreBalance\Lock;
 use GeneroWP\StoreBalance\Logger;
 use GeneroWP\StoreBalance\Module;
+use GeneroWP\StoreBalance\Money;
 use GeneroWP\StoreBalance\Plugin;
 use GeneroWP\StoreBalance\Settings;
 use Throwable;
@@ -54,6 +56,18 @@ class Issuance implements Module
 
     public function issue(WC_Order $order): void
     {
+        // "Paid" is announced more than once, and sometimes at the same
+        // moment: a gateway's webhook and the customer's return to the shop.
+        // Without the lock each of them would find no cards yet, and each
+        // would create them.
+        Lock::order($order->get_id(), function () use ($order): void {
+            $this->issueLocked($order);
+        });
+    }
+
+    protected function issueLocked(WC_Order $order): void
+    {
+        $order->read_meta_data(true);
         $this->reinstate($order);
 
         foreach ($order->get_items() as $item) {
@@ -61,6 +75,8 @@ class Issuance implements Module
                 continue;
             }
 
+            // As it is in the database now, not as this request loaded it.
+            $item->read_meta_data(true);
             $data = $item->get_meta(self::ITEM_DATA);
 
             if (! is_array($data) || empty($data['amount'])) {
@@ -142,7 +158,11 @@ class Issuance implements Module
             'amount' => (float) $data['amount'],
             'currency' => $order->get_currency(),
             'recipient_email' => ! empty($data['to']) ? $data['to'] : $order->get_billing_email(),
-            'sender_name' => ! empty($data['from']) ? $data['from'] : trim($order->get_billing_first_name().' '.$order->get_billing_last_name()),
+            // No recipient means the buyer gets it themselves: there is no
+            // "from" in that email, whatever name they typed.
+            'sender_name' => empty($data['to'])
+                ? ''
+                : (! empty($data['from']) ? $data['from'] : trim($order->get_billing_first_name().' '.$order->get_billing_last_name())),
             'message' => (string) ($data['message'] ?? ''),
             'locale' => (string) ($data['locale'] ?? ''),
             'order_id' => $order->get_id(),
@@ -160,6 +180,15 @@ class Issuance implements Module
         if (! $order instanceof WC_Order) {
             return;
         }
+
+        Lock::order($order->get_id(), function () use ($order): void {
+            $order->read_meta_data(true);
+            $this->withdraw($order);
+        });
+    }
+
+    protected function withdraw(WC_Order $order): void
+    {
 
         $cards = Plugin::getInstance()->cards();
         $disabled = array_filter(array_map('absint', (array) $order->get_meta(self::ORDER_DISABLED)));
@@ -184,8 +213,20 @@ class Issuance implements Module
                 ));
             }
 
-            if ($cards->setStatus($card->id, Card::STATUS_DISABLED, sprintf('Order #%s %s', $order->get_order_number(), $order->get_status()))) {
+            if ($cards->setStatus($card->id, Card::STATUS_DISABLED, sprintf(
+                /* translators: 1: order number, 2: order status */
+                __('Order #%1$s %2$s', 'wp-woocommerce-store-balance'),
+                $order->get_order_number(),
+                strtolower(wc_get_order_status_name($order->get_status()))
+            ))) {
                 $disabled[] = $card->id;
+
+                $order->add_order_note(sprintf(
+                    /* translators: 1: masked gift card code, 2: amount */
+                    __('Gift card %1$s deactivated (%2$s unspent).', 'wp-woocommerce-store-balance'),
+                    $card->maskedCode(),
+                    Money::plain($card->balance, $card->currency)
+                ));
             }
         }
 
@@ -206,8 +247,22 @@ class Issuance implements Module
             return;
         }
 
+        // Money has gone back to the buyer. Reopening the order does not
+        // undo that, so it must not bring the gift cards back either.
+        if ((float) $order->get_total_refunded() > 0) {
+            $order->add_order_note(__('This order has been refunded, so its gift cards stay deactivated. Activate them by hand under WooCommerce → Store balance if the customer has paid again.', 'wp-woocommerce-store-balance'));
+            $order->delete_meta_data(self::ORDER_DISABLED);
+            $order->save();
+
+            return;
+        }
+
         foreach ($disabled as $cardId) {
-            Plugin::getInstance()->cards()->setStatus($cardId, Card::STATUS_ACTIVE, sprintf('Order #%s paid', $order->get_order_number()));
+            Plugin::getInstance()->cards()->setStatus($cardId, Card::STATUS_ACTIVE, sprintf(
+                /* translators: %s: order number */
+                __('Order #%s paid', 'wp-woocommerce-store-balance'),
+                $order->get_order_number()
+            ));
         }
 
         $order->delete_meta_data(self::ORDER_DISABLED);
@@ -242,6 +297,16 @@ class Issuance implements Module
 
         $rows = GiftCardProduct::describe($data);
 
+        if ($order instanceof WC_Order && empty($data['to'])) {
+            $rows[__('To', 'wp-woocommerce-store-balance')] = $order->get_billing_email();
+        }
+
+        $status = $this->deliveryStatus($item);
+
+        if ($status !== '') {
+            $rows[__('Delivery', 'wp-woocommerce-store-balance')] = $status;
+        }
+
         if ($plainText) {
             foreach ($rows as $label => $value) {
                 echo "\n".esc_html($label).': '.esc_html($value);
@@ -261,5 +326,42 @@ class Issuance implements Module
         }
 
         echo '</ul>';
+    }
+
+    /**
+     * What has happened to the cards of a line item, for the buyer: sent, or
+     * when they will be. Empty until the order is paid.
+     */
+    public function deliveryStatus(WC_Order_Item_Product $item): string
+    {
+        $ids = array_filter(array_map('absint', (array) $item->get_meta(self::ITEM_CARDS)));
+        $card = $ids ? Plugin::getInstance()->cards()->find((int) reset($ids)) : null;
+
+        if (! $card) {
+            return '';
+        }
+
+        if (! $card->isActive()) {
+            return __('Cancelled', 'wp-woocommerce-store-balance');
+        }
+
+        if ($card->deliveredAt) {
+            return sprintf(
+                /* translators: %s: date */
+                __('Emailed on %s', 'wp-woocommerce-store-balance'),
+                wp_date(wc_date_format(), $card->deliveredAt)
+            );
+        }
+
+        if ($card->deliverAt) {
+            return sprintf(
+                /* translators: 1: date, 2: time */
+                __('Will be emailed on %1$s, around %2$s', 'wp-woocommerce-store-balance'),
+                wp_date(wc_date_format(), $card->deliverAt),
+                wp_date(wc_time_format(), $card->deliverAt)
+            );
+        }
+
+        return '';
     }
 }

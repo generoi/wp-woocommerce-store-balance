@@ -97,27 +97,8 @@ foreach ($cards->query(['limit' => 50]) as $card) {
     }
 }
 
-// Maija buys something, sends it back and takes store credit.
-$boots = null;
-
-foreach (wc_get_products(['status' => 'publish', 'type' => 'simple', 'limit' => 20]) as $candidate) {
-    if (! GiftCardProduct::isGiftCard($candidate) && (float) $candidate->get_price() > 0) {
-        $boots = $candidate;
-        break;
-    }
-}
-
-if ($boots) {
-    $order = wc_create_order(['customer_id' => $user->ID]);
-    $order->add_product($boots, 1);
-    $order->set_address($billing, 'billing');
-    $order->set_address($billing, 'shipping');
-    $order->set_payment_method('cheque');
-    $order->calculate_totals();
-    $order->update_status('completed', 'Seeded.');
-
-    wc_store_balance_refund_order_to_store_credit($order, (float) $order->get_total(), 'Returned');
-}
+// The shop gives Maija store credit.
+wc_store_balance_issue_store_credit($user->ID, 189, get_woocommerce_currency(), ['note' => 'Goodwill', 'send_email' => false]);
 
 update_option('wc_store_balance_seeded', time());
 

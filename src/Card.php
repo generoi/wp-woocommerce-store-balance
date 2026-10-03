@@ -128,6 +128,16 @@ class Card
         return $this->isActive() && ! $this->isExpired($now) && Money::isPositive($this->balance);
     }
 
+    /**
+     * How the card is referred to where its code must not be shown: the masked
+     * code of a gift card, the number of a store credit (which has no code
+     * anyone ever sees).
+     */
+    public function reference(): string
+    {
+        return $this->isStoreCredit() ? '#'.$this->id : $this->maskedCode();
+    }
+
     public function formattedCode(): string
     {
         return Code::format($this->code);

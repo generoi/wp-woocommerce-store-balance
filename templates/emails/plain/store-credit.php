@@ -15,7 +15,7 @@ use GeneroWP\StoreBalance\Card;
  */
 defined('ABSPATH') || exit;
 
-$plain_amount = wp_strip_all_tags(html_entity_decode($amount));
+$plain_amount = trim(html_entity_decode(wp_strip_all_tags($amount), ENT_QUOTES, 'UTF-8'));
 
 echo "=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=\n";
 echo esc_html(wp_strip_all_tags($email_heading));

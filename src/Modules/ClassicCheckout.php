@@ -2,6 +2,7 @@
 
 namespace GeneroWP\StoreBalance\Modules;
 
+use GeneroWP\StoreBalance\Input;
 use GeneroWP\StoreBalance\Logger;
 use GeneroWP\StoreBalance\Module;
 use GeneroWP\StoreBalance\Plugin;
@@ -83,24 +84,22 @@ class ClassicCheckout implements Module
     {
         $cart = $this->cart();
         // phpcs:ignore WordPress.Security.NonceVerification.Missing -- checked in cart().
-        $result = $cart->applyCode(sanitize_text_field(wp_unslash($_POST['code'] ?? '')));
+        $result = $cart->applyCode(sanitize_text_field(Input::text(wp_unslash($_POST['code'] ?? ''))));
 
         if (is_wp_error($result)) {
             wp_send_json_error(['message' => $result->get_error_message()]);
         }
 
-        WC()->cart->calculate_totals();
-        wp_send_json_success(['message' => __('Gift card applied.', 'wp-woocommerce-store-balance')]);
+        $this->done($cart, __('Gift card applied.', 'wp-woocommerce-store-balance'));
     }
 
     public function ajaxRemove(): void
     {
         $cart = $this->cart();
         // phpcs:ignore WordPress.Security.NonceVerification.Missing -- checked in cart().
-        $cart->removeCard(absint($_POST['id'] ?? 0));
+        $cart->removeCard(absint(Input::text($_POST['id'] ?? '')));
 
-        WC()->cart->calculate_totals();
-        wp_send_json_success(['message' => __('Gift card removed.', 'wp-woocommerce-store-balance')]);
+        $this->done($cart, __('Gift card removed.', 'wp-woocommerce-store-balance'));
     }
 
     public function ajaxUseBalance(): void
@@ -109,8 +108,23 @@ class ClassicCheckout implements Module
         // phpcs:ignore WordPress.Security.NonceVerification.Missing -- checked in cart().
         $cart->setUseBalance(! empty($_POST['value']));
 
+        $this->done($cart, '');
+    }
+
+    /**
+     * The form itself is not part of what WooCommerce redraws after
+     * "update_checkout", so the answer carries the form as it now is.
+     *
+     * @return never
+     */
+    protected function done(Cart $cart, string $message): void
+    {
         WC()->cart->calculate_totals();
-        wp_send_json_success();
+
+        wp_send_json_success([
+            'message' => $message,
+            'html' => Plugin::template('checkout/balance-form.php', ['state' => $cart->state()], true),
+        ]);
     }
 
     protected function cart(): Cart

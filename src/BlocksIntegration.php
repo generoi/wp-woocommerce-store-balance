@@ -71,9 +71,8 @@ class BlocksIntegration implements IntegrationInterface
             'accountUrl' => wc_get_account_endpoint_url(Account::ENDPOINT_GIFT_CARDS),
             'loginUrl' => wc_get_page_permalink('myaccount'),
             'strings' => [
-                'panelTitle' => __('Add a gift card', 'wp-woocommerce-store-balance'),
+                'panelTitle' => __('Have a gift card?', 'wp-woocommerce-store-balance'),
                 'inputLabel' => __('Gift card code', 'wp-woocommerce-store-balance'),
-                'inputPlaceholder' => 'XXXX-XXXX-XXXX-XXXX',
                 'apply' => __('Apply', 'wp-woocommerce-store-balance'),
                 'applying' => __('Applying…', 'wp-woocommerce-store-balance'),
                 'emptyCode' => __('Enter a gift card code.', 'wp-woocommerce-store-balance'),
@@ -84,19 +83,28 @@ class BlocksIntegration implements IntegrationInterface
                 'removeShort' => __('Remove', 'wp-woocommerce-store-balance'),
                 /* translators: %s: masked gift card code */
                 'giftCard' => __('Gift card %s', 'wp-woocommerce-store-balance'),
+                /* translators: 1: amount used, 2: amount left */
+                'usedLeft' => __('%1$s used · %2$s left on the card', 'wp-woocommerce-store-balance'),
+                'notUsed' => __('Not used: the order is already covered', 'wp-woocommerce-store-balance'),
                 /* translators: %s: amount */
-                'remaining' => __('%s left on the card after this order', 'wp-woocommerce-store-balance'),
-                'notUsed' => __('Not needed for this order', 'wp-woocommerce-store-balance'),
-                'accountBalance' => __('Account balance', 'wp-woocommerce-store-balance'),
-                /* translators: %s: amount */
-                'useBalance' => __('Use my balance (%s available)', 'wp-woocommerce-store-balance'),
+                'useBalance' => __('Pay with my balance (%s available)', 'wp-woocommerce-store-balance'),
                 /* translators: 1: gift card amount, 2: store credit amount */
                 'breakdown' => __('%1$s in gift cards, %2$s in store credit', 'wp-woocommerce-store-balance'),
+                /* translators: 1: amount used, 2: amount left */
+                'accountUsedLeft' => __('%1$s used on this order · %2$s stays in your account', 'wp-woocommerce-store-balance'),
+                'accountNotNeeded' => __('Not used: the order is already covered', 'wp-woocommerce-store-balance'),
+                'accountSaved' => __('Saved for later. Tick to use it on this order.', 'wp-woocommerce-store-balance'),
+                'balanceOn' => __('Your balance is used on this order.', 'wp-woocommerce-store-balance'),
+                'balanceOff' => __('Your balance is not used on this order.', 'wp-woocommerce-store-balance'),
                 /* translators: %s: list of amounts in other currencies */
                 'otherCurrencies' => __('You also have %s, which can be used for orders in that currency.', 'wp-woocommerce-store-balance'),
                 'onlyGiftCards' => __('Gift cards and store credit cannot be used to buy gift cards.', 'wp-woocommerce-store-balance'),
+                /* translators: %s: amount */
+                'excluded' => __('The gift card in your cart (%s) cannot be paid with a gift card or store credit, so that part is paid another way.', 'wp-woocommerce-store-balance'),
                 'toPay' => __('Left to pay', 'wp-woocommerce-store-balance'),
-                'fullyCovered' => __('Your balance covers this order. Nothing more to pay.', 'wp-woocommerce-store-balance'),
+                'covered_giftcard' => __('Your gift card covers this order. Nothing more to pay.', 'wp-woocommerce-store-balance'),
+                'covered_store_credit' => __('Your store credit covers this order. Nothing more to pay.', 'wp-woocommerce-store-balance'),
+                'covered_both' => __('Your gift card and store credit cover this order. Nothing more to pay.', 'wp-woocommerce-store-balance'),
                 'genericError' => __('Something went wrong. Please try again.', 'wp-woocommerce-store-balance'),
             ],
         ];

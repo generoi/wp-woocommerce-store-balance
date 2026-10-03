@@ -3,6 +3,7 @@
 namespace GeneroWP\StoreBalance\Modules;
 
 use Automattic\WooCommerce\StoreApi\Exceptions\RouteException;
+use GeneroWP\StoreBalance\Input;
 use GeneroWP\StoreBalance\Module;
 use GeneroWP\StoreBalance\Money;
 use GeneroWP\StoreBalance\Plugin;
@@ -26,13 +27,24 @@ class GiftCardProduct implements Module
 
     public const META_EXPIRY = '_store_balance_expiry_days';
 
+    /** What the last save changed or dropped, shown once in the product editor. */
+    public const META_NOTICES = '_store_balance_notices';
+
     /** The key the gift card details live under on a cart item. */
     public const CART_KEY = 'store_balance_gift_card';
 
     public const MESSAGE_LENGTH = 500;
 
+    public const NAME_LENGTH = 100;
+
     /** @var array<string, mixed>|null Validated form input, carried from validation to the cart item. */
     protected ?array $validated = null;
+
+    /** @var array<string, string>|null Validation errors of this request, keyed by field. Null when nothing was submitted. */
+    protected ?array $errors = null;
+
+    /** Whether this request added a gift card to the cart. */
+    protected bool $added = false;
 
     public function register(): void
     {
@@ -49,6 +61,7 @@ class GiftCardProduct implements Module
         add_filter('woocommerce_product_add_to_cart_text', [$this, 'addToCartText'], 20, 2);
         add_filter('woocommerce_get_price_html', [$this, 'priceHtml'], 20, 2);
         add_filter('woocommerce_coupon_is_valid_for_product', [$this, 'couponValidForProduct'], 20, 2);
+        add_filter('woocommerce_coupon_get_items_to_apply', [$this, 'couponItems'], 20);
         add_filter('woocommerce_order_item_needs_processing', [$this, 'needsProcessing'], 20, 2);
 
         // Product page and cart.
@@ -144,20 +157,31 @@ class GiftCardProduct implements Module
         }
 
         $amounts = $product_object->get_meta(self::META_AMOUNTS);
+        $symbol = get_woocommerce_currency_symbol();
+        $notices = $product_object->get_meta(self::META_NOTICES);
 
         echo '<div class="options_group store-balance-gift-card-options" style="display:none">';
+
+        // What the last save changed or left out. The product editor does not
+        // show WooCommerce's own save errors, so they are kept and shown here.
+        if (is_array($notices) && $notices) {
+            echo '<div class="notice notice-warning inline" style="margin:12px"><p>'.implode('<br>', array_map('esc_html', $notices)).'</p></div>';
+
+            delete_post_meta($product_object->get_id(), self::META_NOTICES);
+        }
+
+        echo '<p class="form-field"><span class="description" style="margin:0;display:block">'.esc_html__('The price of a gift card is the amount the customer chooses, so the price fields are hidden. Gift cards are always virtual and sold without VAT: the VAT is charged on what the card is later spent on.', 'wp-woocommerce-store-balance').'</span></p>';
 
         woocommerce_wp_text_input([
             'id' => self::META_AMOUNTS,
             'label' => sprintf(
                 /* translators: %s: currency symbol */
                 __('Amounts (%s)', 'wp-woocommerce-store-balance'),
-                get_woocommerce_currency_symbol()
+                $symbol
             ),
-            'value' => is_array($amounts) ? implode(', ', array_map('wc_format_localized_decimal', $amounts)) : '',
-            'placeholder' => '25, 50, 100',
-            'description' => __('The amounts the customer can choose from, separated by commas.', 'wp-woocommerce-store-balance'),
-            'desc_tip' => true,
+            'value' => is_array($amounts) ? self::formatAmounts($amounts) : '',
+            'placeholder' => '25; 50; 100',
+            'description' => __('The amounts the customer can choose from, separated by semicolons. For example: 25; 50; 100', 'wp-woocommerce-store-balance'),
         ]);
 
         woocommerce_wp_checkbox([
@@ -169,14 +193,22 @@ class GiftCardProduct implements Module
 
         woocommerce_wp_text_input([
             'id' => self::META_MIN,
-            'label' => __('Smallest custom amount', 'wp-woocommerce-store-balance'),
+            'label' => sprintf(
+                /* translators: %s: currency symbol */
+                __('Smallest custom amount (%s)', 'wp-woocommerce-store-balance'),
+                $symbol
+            ),
             'value' => $product_object->get_meta(self::META_MIN) ?: '5',
             'data_type' => 'price',
         ]);
 
         woocommerce_wp_text_input([
             'id' => self::META_MAX,
-            'label' => __('Largest custom amount', 'wp-woocommerce-store-balance'),
+            'label' => sprintf(
+                /* translators: %s: currency symbol */
+                __('Largest custom amount (%s)', 'wp-woocommerce-store-balance'),
+                $symbol
+            ),
             'value' => $product_object->get_meta(self::META_MAX) ?: '1000',
             'data_type' => 'price',
         ]);
@@ -193,16 +225,20 @@ class GiftCardProduct implements Module
         ]);
 
         echo '</div>';
-
-        // The price of a gift card is the amount the customer picks, so the
-        // price fields would only mislead.
         ?>
         <script>
         jQuery(function ($) {
             var toggle = function () {
                 var on = $('#<?php echo esc_js(self::META_ENABLED); ?>').is(':checked') && $('#product-type').val() === 'simple';
                 $('.store-balance-gift-card-options').toggle(on);
-                $('.options_group.pricing').toggleClass('store-balance-hidden', on).css('display', on ? 'none' : '');
+                // The price and tax fields do not apply to a gift card; left
+                // visible they would only say things that are not true of it.
+                $('.options_group.pricing').css('display', on ? 'none' : '');
+                $('._tax_status_field, ._tax_class_field').closest('.options_group').css('display', on ? 'none' : '');
+
+                if (on) {
+                    $('#_virtual').prop('checked', true).trigger('change');
+                }
             };
             $(document.body).on('change', '#<?php echo esc_js(self::META_ENABLED); ?>, #product-type', toggle);
             $(document.body).on('woocommerce-product-type-change', toggle);
@@ -210,6 +246,74 @@ class GiftCardProduct implements Module
         });
         </script>
         <?php
+    }
+
+    /**
+     * "25; 50; 12,50". A semicolon between amounts, because a comma is a
+     * decimal separator in half the world: a list written with commas cannot
+     * be told apart from one amount with decimals when it is read back.
+     *
+     * @param  array<int, mixed>  $amounts
+     */
+    public static function formatAmounts(array $amounts): string
+    {
+        return implode('; ', array_map(static function ($amount): string {
+            $amount = (float) $amount;
+
+            return floor($amount) == $amount
+                ? (string) (int) $amount
+                : wc_format_localized_price(wc_format_decimal($amount, wc_get_price_decimals()));
+        }, $amounts));
+    }
+
+    /**
+     * Read a list of amounts typed by a person.
+     *
+     * @return array{amounts: float[], rejected: string[]}
+     */
+    public static function parseAmounts(string $input): array
+    {
+        $input = trim($input);
+
+        if ($input === '') {
+            return ['amounts' => [], 'rejected' => []];
+        }
+
+        if (preg_match('/[;\n]/', $input)) {
+            $tokens = preg_split('/[;\n]+/', $input);
+        } elseif (preg_match('/,\s/', $input)) {
+            // "25, 50, 100": a comma followed by a space separates.
+            $tokens = preg_split('/,\s+/', $input);
+        } elseif (substr_count($input, ',') > 1) {
+            // "25,50,100": more than one comma cannot be one number.
+            $tokens = explode(',', $input);
+        } else {
+            $tokens = [$input];
+        }
+
+        $amounts = [];
+        $rejected = [];
+
+        foreach ($tokens ?: [] as $token) {
+            $token = trim($token);
+
+            if ($token === '') {
+                continue;
+            }
+
+            $amount = Money::parse($token);
+
+            if ($amount === null) {
+                $rejected[] = $token;
+            } else {
+                $amounts[] = $amount;
+            }
+        }
+
+        $amounts = array_values(array_unique($amounts));
+        sort($amounts);
+
+        return ['amounts' => $amounts, 'rejected' => $rejected];
     }
 
     public function saveProduct(WC_Product $product): void
@@ -223,34 +327,34 @@ class GiftCardProduct implements Module
             return;
         }
 
-        $amounts = [];
+        $notices = [];
+        $parsed = self::parseAmounts(Input::text(wp_unslash($_POST[self::META_AMOUNTS] ?? '')));
+        $amounts = $parsed['amounts'];
 
-        foreach (preg_split('/[;,\n]+|\s{2,}/', (string) wp_unslash($_POST[self::META_AMOUNTS] ?? '')) ?: [] as $raw) {
-            $amount = Money::parse($raw);
-
-            if ($amount !== null) {
-                $amounts[] = $amount;
-            }
+        if ($parsed['rejected']) {
+            $notices[] = sprintf(
+                /* translators: %s: list of values */
+                __('These amounts were not understood and were left out: %s. Write amounts as numbers separated by semicolons, for example 25; 50; 100.', 'wp-woocommerce-store-balance'),
+                implode(', ', $parsed['rejected'])
+            );
         }
 
-        $amounts = array_values(array_unique($amounts));
-        sort($amounts);
-
         $custom = ! empty($_POST[self::META_CUSTOM]);
-        $min = Money::parse(wp_unslash($_POST[self::META_MIN] ?? '')) ?? 5.0;
-        $max = Money::parse(wp_unslash($_POST[self::META_MAX] ?? '')) ?? 1000.0;
+        $min = Money::parse(Input::text(wp_unslash($_POST[self::META_MIN] ?? ''))) ?? 5.0;
+        $max = Money::parse(Input::text(wp_unslash($_POST[self::META_MAX] ?? ''))) ?? 1000.0;
 
         if ($max < $min) {
             [$min, $max] = [$max, $min];
+            $notices[] = __('The smallest custom amount was larger than the largest, so the two were swapped.', 'wp-woocommerce-store-balance');
         }
 
         // A gift card with nothing to choose from cannot be bought.
         if (! $amounts && ! $custom) {
             $custom = true;
-            \WC_Admin_Meta_Boxes::add_error(__('The gift card had no amounts, so "Custom amount" was switched on. Add amounts to offer fixed choices.', 'wp-woocommerce-store-balance'));
+            $notices[] = __('The gift card had no amounts, so "Custom amount" was switched on. Add amounts to offer fixed choices.', 'wp-woocommerce-store-balance');
         }
 
-        $expiry = wp_unslash($_POST[self::META_EXPIRY] ?? '');
+        $expiry = Input::text(wp_unslash($_POST[self::META_EXPIRY] ?? ''));
         // phpcs:enable
 
         $product->update_meta_data(self::META_AMOUNTS, $amounts);
@@ -258,6 +362,12 @@ class GiftCardProduct implements Module
         $product->update_meta_data(self::META_MIN, wc_format_decimal($min));
         $product->update_meta_data(self::META_MAX, wc_format_decimal($max));
         $product->update_meta_data(self::META_EXPIRY, is_numeric($expiry) ? (string) max(0, (int) $expiry) : '');
+
+        if ($notices) {
+            $product->update_meta_data(self::META_NOTICES, $notices);
+        } else {
+            $product->delete_meta_data(self::META_NOTICES);
+        }
 
         // WooCommerce only sells a product that has a price. The real price is
         // set per cart line; this one is the "from" price for listings and sorting.
@@ -329,6 +439,31 @@ class GiftCardProduct implements Module
     }
 
     /**
+     * The product check above only covers coupons that discount products. A
+     * coupon that takes an amount off the whole cart is spread over every
+     * line, gift cards included, unless they are taken out here.
+     *
+     * @param  mixed  $items
+     * @return mixed
+     */
+    public function couponItems($items)
+    {
+        if (! is_array($items)) {
+            return $items;
+        }
+
+        return array_filter($items, static function ($item): bool {
+            $object = is_object($item) ? ($item->object ?? null) : null;
+
+            if (is_array($object) && ! empty($object[self::CART_KEY])) {
+                return false;
+            }
+
+            return ! (is_object($item) && isset($item->product) && self::isGiftCard($item->product));
+        });
+    }
+
+    /**
      * Nothing to pack or ship, so an order of only gift cards completes on
      * payment instead of waiting in "processing".
      */
@@ -345,10 +480,22 @@ class GiftCardProduct implements Module
             return;
         }
 
-        $user = wp_get_current_user();
+        // Only after a failed attempt: a form that still holds the last gift
+        // card after a successful add invites a second, accidental purchase.
+        $failed = $this->errors !== null;
         // phpcs:disable WordPress.Security.NonceVerification -- repopulating the form after a failed add to cart.
-        $posted = static fn (string $key, string $default = '') => isset($_POST[$key]) ? sanitize_textarea_field(wp_unslash($_POST[$key])) : $default;
+        $posted = static fn (string $key) => $failed && isset($_POST[$key]) ? sanitize_textarea_field(Input::text(wp_unslash($_POST[$key]))) : '';
         // phpcs:enable
+
+        // The shopper has just pressed "Add to cart" on this form, so the
+        // answer belongs here — not wherever the theme happens to print
+        // notices, which may be nowhere, or on the next page they visit.
+        // Printing empties the queue, so nothing is shown twice.
+        $notices = '';
+
+        if (($failed || $this->added) && function_exists('wc_notice_count') && wc_notice_count() > 0) {
+            $notices = wc_print_notices(true);
+        }
 
         Plugin::template('product/gift-card-form.php', [
             'product' => $product,
@@ -358,10 +505,12 @@ class GiftCardProduct implements Module
                 'amount' => $posted('store_balance_amount'),
                 'custom_amount' => $posted('store_balance_custom_amount'),
                 'to' => $posted('store_balance_to'),
-                'from' => $posted('store_balance_from', $user->exists() ? trim($user->first_name) : ''),
+                'from' => $posted('store_balance_from'),
                 'message' => $posted('store_balance_message'),
                 'delivery' => $posted('store_balance_delivery'),
             ],
+            'errors' => $this->errors ?? [],
+            'notices' => $notices,
             'message_length' => self::MESSAGE_LENGTH,
             'min_date' => wp_date('Y-m-d'),
             'max_date' => wp_date('Y-m-d', time() + YEAR_IN_SECONDS),
@@ -370,11 +519,20 @@ class GiftCardProduct implements Module
 
     public function assets(): void
     {
-        if (! function_exists('is_product') || ! is_product()) {
+        if (! function_exists('is_product')) {
             return;
         }
 
-        wp_enqueue_style('wc-store-balance', Plugin::url('assets/frontend.css'), [], WC_STORE_BALANCE_VERSION);
+        // The gift card details under a line item are also shown on the
+        // thank-you page and in My Account.
+        if (is_product() || is_checkout() || is_account_page()) {
+            wp_enqueue_style('wc-store-balance', Plugin::url('assets/frontend.css'), [], WC_STORE_BALANCE_VERSION);
+        }
+
+        if (! is_product()) {
+            return;
+        }
+
         wp_enqueue_script('wc-store-balance-product', Plugin::url('assets/product.js'), [], WC_STORE_BALANCE_VERSION, ['in_footer' => true, 'strategy' => 'defer']);
     }
 
@@ -396,6 +554,8 @@ class GiftCardProduct implements Module
         $result = $this->parse($product, wp_unslash($_POST));
 
         if ($result['errors']) {
+            $this->errors = $result['errors'];
+
             foreach ($result['errors'] as $error) {
                 wc_add_notice($error, 'error');
             }
@@ -410,31 +570,35 @@ class GiftCardProduct implements Module
 
     /**
      * @param  array<string, mixed>  $input
-     * @return array{data: array<string, mixed>, errors: string[]}
+     * @return array{data: array<string, mixed>, errors: array<string, string>} errors keyed by the field they belong to
      */
     public function parse(WC_Product $product, array $input): array
     {
         $errors = [];
         $amounts = self::amounts($product);
         $custom = self::customAmount($product);
-        $choice = (string) ($input['store_balance_amount'] ?? '');
+        $choice = Input::text($input['store_balance_amount'] ?? '');
         $amount = null;
 
         if ($choice === 'custom' || ($choice === '' && ! $amounts)) {
-            $amount = Money::parse($input['store_balance_custom_amount'] ?? '');
+            $typed = Input::text($input['store_balance_custom_amount'] ?? '');
+            $amount = Money::parse($typed);
+            $range = sprintf(
+                /* translators: 1: smallest amount, 2: largest amount */
+                __('Choose an amount between %1$s and %2$s.', 'wp-woocommerce-store-balance'),
+                Money::plain($custom['min']),
+                Money::plain($custom['max'])
+            );
 
             if (! $custom['enabled']) {
                 $amount = null;
-                $errors[] = __('Choose one of the amounts.', 'wp-woocommerce-store-balance');
+                $errors['amount'] = __('Choose one of the amounts.', 'wp-woocommerce-store-balance');
+            } elseif (trim($typed) === '') {
+                $errors['custom_amount'] = __('Enter the amount for the gift card.', 'wp-woocommerce-store-balance').' '.$range;
             } elseif ($amount === null) {
-                $errors[] = __('Enter the amount for the gift card.', 'wp-woocommerce-store-balance');
+                $errors['custom_amount'] = __('Enter the amount as a number, for example 50 or 49,90.', 'wp-woocommerce-store-balance');
             } elseif ($amount < $custom['min'] || $amount > $custom['max']) {
-                $errors[] = sprintf(
-                    /* translators: 1: smallest amount, 2: largest amount */
-                    __('Choose an amount between %1$s and %2$s.', 'wp-woocommerce-store-balance'),
-                    wp_strip_all_tags(wc_price($custom['min'])),
-                    wp_strip_all_tags(wc_price($custom['max']))
-                );
+                $errors['custom_amount'] = $range;
                 $amount = null;
             }
         } else {
@@ -444,38 +608,38 @@ class GiftCardProduct implements Module
             if ($picked !== null && in_array($picked, $amounts, true)) {
                 $amount = $picked;
             } else {
-                $errors[] = __('Choose an amount for the gift card.', 'wp-woocommerce-store-balance');
+                $errors['amount'] = __('Choose an amount for the gift card.', 'wp-woocommerce-store-balance');
             }
         }
 
-        $to = trim((string) ($input['store_balance_to'] ?? ''));
+        $to = trim(Input::text($input['store_balance_to'] ?? ''));
 
-        if ($to !== '' && ! is_email($to)) {
-            $errors[] = __('Enter a valid email address for the recipient, or leave it empty to receive the gift card yourself.', 'wp-woocommerce-store-balance');
+        if ($to !== '' && (! is_email($to) || strlen($to) > 200)) {
+            $errors['to'] = __('Enter a valid email address for the recipient, or leave it empty to receive the gift card yourself.', 'wp-woocommerce-store-balance');
         }
 
-        $message = sanitize_textarea_field((string) ($input['store_balance_message'] ?? ''));
+        $message = sanitize_textarea_field(Input::text($input['store_balance_message'] ?? ''));
 
         if (mb_strlen($message) > self::MESSAGE_LENGTH) {
-            $errors[] = sprintf(
+            $errors['message'] = sprintf(
                 /* translators: %d: number of characters */
                 __('The message can be at most %d characters.', 'wp-woocommerce-store-balance'),
                 self::MESSAGE_LENGTH
             );
         }
 
-        $delivery = trim((string) ($input['store_balance_delivery'] ?? ''));
+        $delivery = trim(Input::text($input['store_balance_delivery'] ?? ''));
 
         if ($delivery !== '') {
             $date = \DateTimeImmutable::createFromFormat('!Y-m-d', $delivery, wp_timezone());
             $today = new \DateTimeImmutable('today', wp_timezone());
 
             if (! $date || $date->format('Y-m-d') !== $delivery) {
-                $errors[] = __('Enter a valid delivery date.', 'wp-woocommerce-store-balance');
+                $errors['delivery'] = __('Enter a valid delivery date.', 'wp-woocommerce-store-balance');
             } elseif ($date < $today) {
-                $errors[] = __('The delivery date cannot be in the past.', 'wp-woocommerce-store-balance');
+                $errors['delivery'] = __('The delivery date cannot be in the past.', 'wp-woocommerce-store-balance');
             } elseif ($date > $today->modify('+1 year')) {
-                $errors[] = __('The delivery date can be at most one year from now.', 'wp-woocommerce-store-balance');
+                $errors['delivery'] = __('The delivery date can be at most one year from now.', 'wp-woocommerce-store-balance');
             } elseif ($date == $today) {
                 // Today means now.
                 $delivery = '';
@@ -487,7 +651,9 @@ class GiftCardProduct implements Module
             'data' => [
                 'amount' => $amount,
                 'to' => sanitize_email($to),
-                'from' => sanitize_text_field((string) ($input['store_balance_from'] ?? '')),
+                // Cut rather than refused: nobody's name is longer than this,
+                // and a paid order must never fail to produce its card over it.
+                'from' => Input::limit(sanitize_text_field(Input::text($input['store_balance_from'] ?? '')), self::NAME_LENGTH),
                 'message' => $message,
                 'delivery' => $delivery,
                 'locale' => determine_locale(),
@@ -508,6 +674,7 @@ class GiftCardProduct implements Module
 
         $data[self::CART_KEY] = $this->validated;
         $this->validated = null;
+        $this->added = true;
 
         return $data;
     }
@@ -538,7 +705,13 @@ class GiftCardProduct implements Module
 
         foreach ($cart->get_cart() as $item) {
             if (! empty($item[self::CART_KEY]['amount']) && $item['data'] instanceof WC_Product) {
-                $item['data']->set_price(wc_format_decimal($item[self::CART_KEY]['amount']));
+                $amount = wc_format_decimal($item[self::CART_KEY]['amount']);
+
+                // All three, or an amount below the product's "from" price
+                // shows up in the cart as a sale with a "Save" badge.
+                $item['data']->set_regular_price($amount);
+                $item['data']->set_sale_price('');
+                $item['data']->set_price($amount);
             }
         }
     }
@@ -561,6 +734,19 @@ class GiftCardProduct implements Module
             $rows[] = ['key' => $label, 'value' => $value];
         }
 
+        $quantity = (int) ($item['quantity'] ?? 1);
+
+        if ($quantity > 1) {
+            $rows[] = [
+                'key' => __('Quantity', 'wp-woocommerce-store-balance'),
+                'value' => sprintf(
+                    /* translators: %d: number of gift cards */
+                    __('%d separate gift cards, all to the same recipient', 'wp-woocommerce-store-balance'),
+                    $quantity
+                ),
+            ];
+        }
+
         return $rows;
     }
 
@@ -574,7 +760,7 @@ class GiftCardProduct implements Module
 
         $rows[__('To', 'wp-woocommerce-store-balance')] = ! empty($data['to'])
             ? (string) $data['to']
-            : __('You (sent to your own email)', 'wp-woocommerce-store-balance');
+            : __('Your own email address', 'wp-woocommerce-store-balance');
 
         if (! empty($data['from'])) {
             $rows[__('From', 'wp-woocommerce-store-balance')] = (string) $data['from'];
@@ -586,9 +772,13 @@ class GiftCardProduct implements Module
 
         if (! empty($data['delivery'])) {
             $date = \DateTimeImmutable::createFromFormat('!Y-m-d', (string) $data['delivery'], wp_timezone());
-            $rows[__('Delivery', 'wp-woocommerce-store-balance')] = $date ? wp_date(wc_date_format(), $date->getTimestamp()) : (string) $data['delivery'];
+            $rows[__('Delivery', 'wp-woocommerce-store-balance')] = sprintf(
+                /* translators: %s: date */
+                __('By email on %s', 'wp-woocommerce-store-balance'),
+                $date ? wp_date(wc_date_format(), $date->getTimestamp()) : (string) $data['delivery']
+            );
         } else {
-            $rows[__('Delivery', 'wp-woocommerce-store-balance')] = __('By email, right after payment', 'wp-woocommerce-store-balance');
+            $rows[__('Delivery', 'wp-woocommerce-store-balance')] = __('By email, as soon as the payment is confirmed', 'wp-woocommerce-store-balance');
         }
 
         return $rows;

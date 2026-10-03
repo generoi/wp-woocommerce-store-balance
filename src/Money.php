@@ -26,13 +26,41 @@ class Money
         return number_format((float) $amount, 4, '.', '');
     }
 
+    /**
+     * A price as plain text, for an order note, an email subject or a log
+     * line. wc_price() returns HTML; stripping the tags alone leaves
+     * "50,00&nbsp;&euro;" behind.
+     */
+    public static function plain(float|int|string $amount, string $currency = ''): string
+    {
+        $html = wc_price((float) $amount, $currency !== '' ? ['currency' => $currency] : []);
+
+        return trim(html_entity_decode(wp_strip_all_tags($html), ENT_QUOTES, 'UTF-8'));
+    }
+
+    /**
+     * Like parse(), but zero is an answer too: a balance can be set to nothing.
+     */
+    public static function parseAllowZero(mixed $input): ?float
+    {
+        if (is_string($input) && preg_match('/^\s*0+([.,]0*)?\s*$/', $input)) {
+            return 0.0;
+        }
+
+        if ($input === 0 || $input === 0.0) {
+            return 0.0;
+        }
+
+        return self::parse($input);
+    }
+
     public static function isPositive(float|int|string $amount): bool
     {
         return self::round($amount, 4) > 0;
     }
 
     /**
-     * Parse an amount typed by a person: "50", "50,00", "1 000.50".
+     * Parse an amount typed by a person: "50", "50,00", "1 000.50", "50 €".
      *
      * Returns null for anything that is not a plain positive number, rather
      * than guessing.
@@ -47,7 +75,11 @@ class Money
             return null;
         }
 
-        $value = preg_replace('/[\s\x{00A0}]+/u', '', trim($input)) ?? '';
+        $value = preg_replace('/[\s\x{00A0}\x{202F}]+/u', '', trim($input)) ?? '';
+
+        // A currency sign or code before or after the number: "50 €", "€50",
+        // "50 EUR", "50 kr".
+        $value = preg_replace('/^(?:[\p{Sc}]|[A-Za-z]{2,3}\.?)|(?:[\p{Sc}]|[A-Za-z]{2,3}\.?)$/u', '', $value) ?? '';
 
         if ($value === '') {
             return null;
@@ -61,7 +93,12 @@ class Money
 
         $value = str_replace(',', '.', $value);
 
-        if (! preg_match('/^\d+(\.\d+)?$/', $value)) {
+        // "25." is someone who stopped typing; "25.999" is not an amount in a
+        // currency with two decimals, and rounding it would charge a figure
+        // the customer never entered.
+        $decimals = function_exists('wc_get_price_decimals') ? wc_get_price_decimals() : 2;
+
+        if (! preg_match('/^\d+(\.\d{0,'.$decimals.'})?$/', $value)) {
             return null;
         }
 

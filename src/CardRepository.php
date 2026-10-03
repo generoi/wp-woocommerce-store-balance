@@ -61,9 +61,9 @@ class CardRepository
             'initial_amount' => Money::sql($amount),
             'balance' => Money::sql($amount),
             'customer_id' => absint($data['customer_id'] ?? 0),
-            'recipient_email' => sanitize_email((string) ($data['recipient_email'] ?? '')),
-            'sender_name' => sanitize_text_field((string) ($data['sender_name'] ?? '')),
-            'message' => sanitize_textarea_field((string) ($data['message'] ?? '')),
+            'recipient_email' => Input::limit(sanitize_email(Input::text($data['recipient_email'] ?? '')), 200),
+            'sender_name' => Input::limit(sanitize_text_field(Input::text($data['sender_name'] ?? '')), 200),
+            'message' => sanitize_textarea_field(Input::text($data['message'] ?? '')),
             'locale' => sanitize_text_field((string) ($data['locale'] ?? '')),
             'order_id' => absint($data['order_id'] ?? 0),
             'order_item_id' => absint($data['order_item_id'] ?? 0),
@@ -222,6 +222,29 @@ class CardRepository
             }
         }
 
+        // What staff mean by a status, which is more than the status column:
+        // a card can be active and still unusable because it is spent or expired.
+        $now = self::now();
+
+        switch ((string) ($args['state'] ?? '')) {
+            case 'usable':
+                $where[] = 'status = %s AND balance > 0 AND (expires_at IS NULL OR expires_at > %s)';
+                array_push($values, Card::STATUS_ACTIVE, $now);
+                break;
+            case 'spent':
+                $where[] = 'status = %s AND balance <= 0';
+                $values[] = Card::STATUS_ACTIVE;
+                break;
+            case 'expired':
+                $where[] = 'status = %s AND balance > 0 AND expires_at IS NOT NULL AND expires_at <= %s';
+                array_push($values, Card::STATUS_ACTIVE, $now);
+                break;
+            case 'disabled':
+                $where[] = 'status = %s';
+                $values[] = Card::STATUS_DISABLED;
+                break;
+        }
+
         if (! empty($args['search'])) {
             $search = (string) $args['search'];
             $like = '%'.$wpdb->esc_like($search).'%';
@@ -234,6 +257,12 @@ class CardRepository
             if ($code !== '') {
                 $clause .= ' OR code LIKE %s';
                 $values[] = '%'.$wpdb->esc_like($code).'%';
+            }
+
+            // "#64" or "64": the number a store credit goes by.
+            if (preg_match('/^#?(\d+)$/', trim($search), $match)) {
+                $clause .= ' OR id = %d';
+                $values[] = (int) $match[1];
             }
 
             $users = get_users(['search' => '*'.$search.'*', 'search_columns' => ['user_email', 'user_login', 'display_name'], 'fields' => 'ID', 'number' => 50]);
@@ -269,8 +298,11 @@ class CardRepository
 
         $now = self::now();
 
+        // The new balance is captured by the same statement that changes it.
+        // Read in a second query it could already include someone else's
+        // debit, and the ledger would not add up.
         $updated = $wpdb->query($wpdb->prepare(
-            'UPDATE %i SET balance = balance - %s, updated_at = %s
+            'UPDATE %i SET balance = (@wc_sb_balance := balance - %s), updated_at = %s
             WHERE id = %d AND status = %s AND balance >= %s AND (expires_at IS NULL OR expires_at > %s)',
             Install::cardsTable(),
             Money::sql($amount),
@@ -285,7 +317,7 @@ class CardRepository
             return false;
         }
 
-        $this->addTransaction($id, self::TX_DEBIT, -$amount, $context);
+        $this->addTransaction($id, self::TX_DEBIT, -$amount, $context + ['balance_after' => $wpdb->get_var('SELECT @wc_sb_balance')]);
 
         return true;
     }
@@ -295,6 +327,10 @@ class CardRepository
      *
      * Works on a disabled or expired card too: money that was taken from it and
      * is being returned belongs there regardless.
+     *
+     * Money returned to a card that has expired, or is about to, would be
+     * returned to nowhere. The card gets a grace period instead, long enough
+     * to spend what came back.
      *
      * @param  array<string, mixed>  $context
      */
@@ -308,11 +344,21 @@ class CardRepository
             return false;
         }
 
+        /**
+         * Filters how many days a card stays valid, at least, after a balance
+         * has been returned to it.
+         */
+        $grace = gmdate('Y-m-d H:i:s', time() + max(0, (int) apply_filters('wc_store_balance_returned_balance_grace_days', 30)) * DAY_IN_SECONDS);
+
         $updated = $wpdb->query($wpdb->prepare(
-            'UPDATE %i SET balance = balance + %s, updated_at = %s WHERE id = %d',
+            'UPDATE %i SET balance = (@wc_sb_balance := balance + %s), updated_at = %s,
+            expires_at = CASE WHEN expires_at IS NOT NULL AND expires_at < %s THEN %s ELSE expires_at END
+            WHERE id = %d',
             Install::cardsTable(),
             Money::sql($amount),
             self::now(),
+            $grace,
+            $grace,
             $id
         ));
 
@@ -320,7 +366,7 @@ class CardRepository
             return false;
         }
 
-        $this->addTransaction($id, $type, $amount, $context);
+        $this->addTransaction($id, $type, $amount, $context + ['balance_after' => $wpdb->get_var('SELECT @wc_sb_balance')]);
 
         return true;
     }
@@ -332,20 +378,30 @@ class CardRepository
     {
         global $wpdb;
 
-        $card = $this->find($id);
         $balance = Money::round($balance);
 
-        if (! $card || $balance < 0) {
+        if ($balance < 0 || ! $this->find($id)) {
             return false;
         }
 
-        $updated = $wpdb->update(Install::cardsTable(), ['balance' => Money::sql($balance), 'updated_at' => self::now()], ['id' => $id]);
+        // The old balance is read by the statement that replaces it, so the
+        // ledger row is the true difference even if a checkout debits the
+        // card at the same moment.
+        $updated = $wpdb->query($wpdb->prepare(
+            'UPDATE %i SET balance = %s, updated_at = %s WHERE id = %d AND (@wc_sb_old := balance) IS NOT NULL',
+            Install::cardsTable(),
+            Money::sql($balance),
+            self::now(),
+            $id
+        ));
 
         if ($updated === false) {
             return false;
         }
 
-        $this->addTransaction($id, self::TX_ADJUST, Money::round($balance - $card->balance), ['note' => $note]);
+        $old = (float) $wpdb->get_var('SELECT @wc_sb_old');
+
+        $this->addTransaction($id, self::TX_ADJUST, Money::round($balance - $old), ['note' => $note, 'balance_after' => $balance]);
 
         return true;
     }
@@ -417,7 +473,7 @@ class CardRepository
     {
         global $wpdb;
 
-        $balance = $wpdb->get_var($wpdb->prepare('SELECT balance FROM %i WHERE id = %d', Install::cardsTable(), $cardId));
+        $balance = $context['balance_after'] ?? $wpdb->get_var($wpdb->prepare('SELECT balance FROM %i WHERE id = %d', Install::cardsTable(), $cardId));
 
         $wpdb->insert(Install::transactionsTable(), [
             'card_id' => $cardId,

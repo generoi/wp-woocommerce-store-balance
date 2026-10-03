@@ -9,6 +9,7 @@ use GeneroWP\StoreBalance\Logger;
 use GeneroWP\StoreBalance\Module;
 use GeneroWP\StoreBalance\Money;
 use GeneroWP\StoreBalance\Plugin;
+use GeneroWP\StoreBalance\Throttle;
 use WC_Cart;
 use WP_Error;
 
@@ -27,8 +28,6 @@ class Cart implements Module
     public const SESSION_USE_BALANCE = 'store_balance_use_balance';
 
     public const MAX_CODES = 5;
-
-    public const MAX_FAILED_ATTEMPTS = 10;
 
     /** @var array<string, mixed>|null */
     protected ?array $state = null;
@@ -82,6 +81,7 @@ class Cart implements Module
             'currency' => get_woocommerce_currency(),
             'original_total' => 0.0,
             'eligible_total' => 0.0,
+            'excluded_total' => 0.0,
             'applied_total' => 0.0,
             'codes' => [],
             'account' => ['available' => 0.0, 'used' => 0.0, 'gift_cards' => 0.0, 'store_credit' => 0.0, 'other_currencies' => []],
@@ -107,6 +107,7 @@ class Cart implements Module
         // A balance cannot buy a gift card: that would turn store credit into a
         // transferable code and let one card be laundered into another.
         $state['eligible_total'] = max(0, Money::round($total - $giftCardLines));
+        $state['excluded_total'] = min($giftCardLines, Money::round($total));
         $state['only_gift_cards'] = $giftCardLines > 0 && $state['eligible_total'] <= 0;
 
         $remaining = $state['eligible_total'];
@@ -119,6 +120,15 @@ class Cart implements Module
             // Gone, spent, expired or disabled since it was applied: drop it
             // from the session rather than keep showing a dead line.
             if (! $card || ! $card->isActive() || $card->isExpired() || ! $card->isGiftCard() || isset($seen[$card->id])) {
+                $this->forgetCode($code);
+
+                continue;
+            }
+
+            // Added to an account since it was typed in here. From then on it
+            // is spent from that account's balance and the code is dead —
+            // including in a cart that still had it applied.
+            if ($card->isRedeemed()) {
                 $this->forgetCode($code);
 
                 continue;
@@ -203,7 +213,7 @@ class Cart implements Module
 
                 foreach (Allocator::allocate($remaining, $sorted, $decimals) as $cardId => $amount) {
                     $card = $accountCards[$cardId];
-                    $state['lines'][] = ['card_id' => $cardId, 'type' => $card->type, 'masked' => $card->maskedCode(), 'amount' => $amount, 'source' => 'account'];
+                    $state['lines'][] = ['card_id' => $cardId, 'type' => $card->type, 'masked' => $card->reference(), 'amount' => $amount, 'source' => 'account'];
                     $state['account']['used'] = Money::round($state['account']['used'] + $amount);
                     $remaining = Money::round($remaining - $amount);
                 }
@@ -230,50 +240,21 @@ class Cart implements Module
             return new WP_Error('wc_store_balance_no_session', __('Your session has expired. Reload the page and try again.', 'wp-woocommerce-store-balance'));
         }
 
-        if ($this->tooManyAttempts()) {
-            return new WP_Error('wc_store_balance_throttled', __('Too many attempts. Please wait a few minutes and try again.', 'wp-woocommerce-store-balance'));
+        if (Throttle::blocked()) {
+            return new WP_Error('wc_store_balance_throttled', __('Too many attempts. Please wait ten minutes and try again.', 'wp-woocommerce-store-balance'));
         }
-
-        $invalid = new WP_Error('wc_store_balance_invalid_code', __('That code is not valid. Check it and try again.', 'wp-woocommerce-store-balance'));
 
         if (trim($input) === '') {
             return new WP_Error('wc_store_balance_empty_code', __('Enter a gift card code.', 'wp-woocommerce-store-balance'));
         }
 
         $card = Plugin::getInstance()->cards()->findByCode($input);
+        $error = $this->refusal($card);
 
-        // Store credit is never spent by code, and says nothing about itself to
-        // someone who guesses one.
-        if (! $card || ! $card->isGiftCard() || ! $card->isActive()) {
-            $this->recordFailedAttempt($input);
+        if ($error) {
+            Throttle::hit();
 
-            return $invalid;
-        }
-
-        if ($card->isExpired()) {
-            return new WP_Error('wc_store_balance_expired', sprintf(
-                /* translators: %s: date */
-                __('This gift card expired on %s.', 'wp-woocommerce-store-balance'),
-                wp_date(wc_date_format(), $card->expiresAt)
-            ));
-        }
-
-        if ($card->isRedeemed()) {
-            if ($card->customerId === get_current_user_id()) {
-                return new WP_Error('wc_store_balance_in_account', __('This gift card is already in your account balance.', 'wp-woocommerce-store-balance'));
-            }
-
-            return new WP_Error('wc_store_balance_redeemed', __('This gift card has been added to an account. Log in to that account to use it.', 'wp-woocommerce-store-balance'));
-        }
-
-        if (! Money::isPositive($card->balance)) {
-            return new WP_Error('wc_store_balance_empty', __('This gift card has no balance left.', 'wp-woocommerce-store-balance'));
-        }
-
-        $currency = get_woocommerce_currency();
-
-        if ($card->currency !== $currency) {
-            return new WP_Error('wc_store_balance_currency', $this->currencyMessage($card, $currency));
+            return $error;
         }
 
         $codes = $this->codes();
@@ -431,30 +412,43 @@ class Cart implements Module
         );
     }
 
-    protected function attemptsKey(): string
+    /**
+     * Why a code cannot be used in this cart, or null if it can.
+     */
+    protected function refusal(?Card $card): ?WP_Error
     {
-        $id = $this->hasSession() ? (string) WC()->session->get_customer_id() : '';
-
-        return 'wc_sb_attempts_'.md5($id ?: (string) \WC_Geolocation::get_ip_address());
-    }
-
-    protected function tooManyAttempts(): bool
-    {
-        return (int) get_transient($this->attemptsKey()) >= self::MAX_FAILED_ATTEMPTS;
-    }
-
-    protected function recordFailedAttempt(string $input): void
-    {
-        $key = $this->attemptsKey();
-        $attempts = (int) get_transient($key) + 1;
-
-        set_transient($key, $attempts, 10 * MINUTE_IN_SECONDS);
-
-        if ($attempts === self::MAX_FAILED_ATTEMPTS) {
-            Logger::warning('Gift card code attempts throttled', [
-                'user_id' => get_current_user_id(),
-                'ip' => \WC_Geolocation::get_ip_address(),
-            ]);
+        // Store credit is never spent by code, and says nothing about itself to
+        // someone who guesses one.
+        if (! $card || ! $card->isGiftCard() || ! $card->isActive()) {
+            return new WP_Error('wc_store_balance_invalid_code', __('We could not find that gift card code. Please check it and try again.', 'wp-woocommerce-store-balance'));
         }
+
+        if ($card->isExpired()) {
+            return new WP_Error('wc_store_balance_expired', sprintf(
+                /* translators: %s: date */
+                __('This gift card expired on %s.', 'wp-woocommerce-store-balance'),
+                wp_date(wc_date_format(), $card->expiresAt)
+            ));
+        }
+
+        if ($card->isRedeemed()) {
+            if ($card->customerId === get_current_user_id()) {
+                return new WP_Error('wc_store_balance_in_account', __('This gift card is already in your account balance.', 'wp-woocommerce-store-balance'));
+            }
+
+            return new WP_Error('wc_store_balance_redeemed', __('This gift card has been added to an account. Log in to that account to use it.', 'wp-woocommerce-store-balance'));
+        }
+
+        if (! Money::isPositive($card->balance)) {
+            return new WP_Error('wc_store_balance_empty', __('This gift card has no balance left.', 'wp-woocommerce-store-balance'));
+        }
+
+        $currency = get_woocommerce_currency();
+
+        if ($card->currency !== $currency) {
+            return new WP_Error('wc_store_balance_currency', $this->currencyMessage($card, $currency));
+        }
+
+        return null;
     }
 }

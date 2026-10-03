@@ -5,8 +5,11 @@ namespace GeneroWP\StoreBalance\Modules;
 use Automattic\WooCommerce\StoreApi\Exceptions\RouteException;
 use Automattic\WooCommerce\StoreApi\Schemas\V1\CartSchema;
 use GeneroWP\StoreBalance\BlocksIntegration;
+use GeneroWP\StoreBalance\Card;
+use GeneroWP\StoreBalance\Input;
 use GeneroWP\StoreBalance\Logger;
 use GeneroWP\StoreBalance\Module;
+use GeneroWP\StoreBalance\Money;
 use GeneroWP\StoreBalance\Plugin;
 
 /**
@@ -74,13 +77,29 @@ class Blocks implements Module
 
             $other = [];
             foreach ($account['other_currencies'] ?? [] as $currency => $amount) {
-                $other[] = wp_strip_all_tags(html_entity_decode(wc_price($amount, ['currency' => $currency])));
+                $other[] = Money::plain($amount, (string) $currency);
+            }
+
+            // One row per kind of balance, gift cards first.
+            $byType = [];
+            foreach ($state['lines'] ?? [] as $line) {
+                $byType[$line['type']] = ($byType[$line['type']] ?? 0) + $line['amount'];
+            }
+
+            $rows = [];
+            foreach (Card::types() as $type) {
+                if (($byType[$type] ?? 0) > 0) {
+                    $rows[] = ['label' => Orders::label([['type' => $type]]), 'amount' => $money($byType[$type])];
+                }
             }
 
             return [
                 'applied_total' => $money($state['applied_total'] ?? 0),
                 'original_total' => $money($state['original_total'] ?? 0),
+                'excluded_total' => $money($state['excluded_total'] ?? 0),
                 'label' => Orders::label($state['lines'] ?? []),
+                'kind' => count($byType) > 1 ? 'both' : (string) (array_key_first($byType) ?? ''),
+                'rows' => $rows,
                 'codes' => array_map(static fn (array $line): array => [
                     'id' => (int) $line['card_id'],
                     'masked' => (string) $line['masked'],
@@ -110,7 +129,10 @@ class Blocks implements Module
         return [
             'applied_total' => '0',
             'original_total' => '0',
+            'excluded_total' => '0',
             'label' => '',
+            'kind' => '',
+            'rows' => [],
             'codes' => [],
             'account' => ['available' => '0', 'used' => '0', 'gift_cards' => '0', 'store_credit' => '0', 'other_currencies' => []],
             'use_balance' => true,
@@ -129,7 +151,10 @@ class Blocks implements Module
         return [
             'applied_total' => ['description' => 'Amount paid from gift cards and store credit, in minor units.'] + $amount,
             'original_total' => ['description' => 'Cart total before the balance was applied, in minor units.'] + $amount,
+            'excluded_total' => ['description' => 'The part of the cart a balance cannot pay for (gift cards), in minor units.'] + $amount,
             'label' => ['description' => 'What the applied balance is made of.', 'type' => 'string', 'context' => ['view', 'edit'], 'readonly' => true],
+            'kind' => ['description' => 'giftcard, store_credit, both, or empty.', 'type' => 'string', 'context' => ['view', 'edit'], 'readonly' => true],
+            'rows' => ['description' => 'The applied balance per kind.', 'type' => 'array', 'context' => ['view', 'edit'], 'readonly' => true],
             'codes' => ['description' => 'Gift card codes applied to the cart.', 'type' => 'array', 'context' => ['view', 'edit'], 'readonly' => true],
             'account' => ['description' => 'The balance on the customer account.', 'type' => 'object', 'context' => ['view', 'edit'], 'readonly' => true],
             'use_balance' => ['description' => 'Whether the account balance is used.', 'type' => 'boolean', 'context' => ['view', 'edit'], 'readonly' => true],
@@ -151,9 +176,9 @@ class Blocks implements Module
             return;
         }
 
-        switch ((string) ($data['action'] ?? '')) {
+        switch (Input::text($data['action'] ?? '')) {
             case 'apply':
-                $result = $cart->applyCode(sanitize_text_field((string) ($data['code'] ?? '')));
+                $result = $cart->applyCode(sanitize_text_field(Input::text($data['code'] ?? '')));
 
                 if (is_wp_error($result)) {
                     throw new RouteException((string) $result->get_error_code(), $result->get_error_message(), 400);
@@ -161,7 +186,7 @@ class Blocks implements Module
                 break;
 
             case 'remove':
-                $cart->removeCard(absint($data['id'] ?? 0));
+                $cart->removeCard(absint(Input::text($data['id'] ?? 0)));
                 break;
 
             case 'use_balance':

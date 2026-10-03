@@ -2,6 +2,7 @@
 
 namespace GeneroWP\StoreBalance\Emails;
 
+use GeneroWP\StoreBalance\Card;
 use GeneroWP\StoreBalance\Modules\Account;
 
 class StoreCreditEmail extends CardEmail
@@ -26,6 +27,20 @@ class StoreCreditEmail extends CardEmail
     public function get_default_heading(): string
     {
         return __('You have store credit', 'wp-woocommerce-store-balance');
+    }
+
+    protected function sampleCard(): Card
+    {
+        return new Card([
+            'code' => 'ABCDEFGH23456789',
+            'type' => Card::TYPE_STORE_CREDIT,
+            'currency' => get_woocommerce_currency(),
+            'initial_amount' => 25,
+            'balance' => 25,
+            'customer_id' => 1,
+            'recipient_email' => 'customer@example.com',
+            'expires_at' => gmdate('Y-m-d H:i:s', time() + YEAR_IN_SECONDS),
+        ]);
     }
 
     public function get_default_additional_content(): string

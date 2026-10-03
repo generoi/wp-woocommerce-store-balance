@@ -63,3 +63,29 @@
 .wc-store-balance-admin .order-status {
     display: inline-flex;
 }
+
+.wc-store-balance-admin__amount {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.wc-store-balance-admin__code {
+    font-size: 15px;
+    user-select: all;
+}
+
+.wc-store-balance-admin__action .description {
+    display: block;
+    margin-top: 6px;
+}
+
+.wc-store-balance-admin__search-hint {
+    clear: both;
+    text-align: right;
+    margin: 0 0 8px;
+}
+
+.wc-store-balance-admin .notice.inline {
+    margin: 12px 0;
+}

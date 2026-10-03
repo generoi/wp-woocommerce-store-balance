@@ -24,12 +24,12 @@ class CardsTable extends WP_List_Table
     public function get_columns(): array
     {
         return [
-            'code' => __('Code', 'wp-woocommerce-store-balance'),
-            'type' => __('Type', 'wp-woocommerce-store-balance'),
+            'code' => __('Card', 'wp-woocommerce-store-balance'),
             'owner' => __('Customer / recipient', 'wp-woocommerce-store-balance'),
             'balance' => __('Balance', 'wp-woocommerce-store-balance'),
             'status' => __('Status', 'wp-woocommerce-store-balance'),
-            'expires' => __('Valid until', 'wp-woocommerce-store-balance'),
+            'expires' => __('Expires', 'wp-woocommerce-store-balance'),
+            'order' => __('Order', 'wp-woocommerce-store-balance'),
             'created' => __('Created', 'wp-woocommerce-store-balance'),
         ];
     }
@@ -40,8 +40,8 @@ class CardsTable extends WP_List_Table
         // phpcs:disable WordPress.Security.NonceVerification.Recommended -- read-only filters.
         $args = [
             'type' => isset($_GET['type']) && in_array($_GET['type'], Card::types(), true) ? sanitize_key($_GET['type']) : null,
-            'status' => isset($_GET['status']) && in_array($_GET['status'], [Card::STATUS_ACTIVE, Card::STATUS_DISABLED], true) ? sanitize_key($_GET['status']) : null,
-            'search' => isset($_GET['s']) ? sanitize_text_field(wp_unslash($_GET['s'])) : '',
+            'state' => isset($_GET['status']) && array_key_exists($_GET['status'], self::states()) ? sanitize_key($_GET['status']) : null,
+            'search' => isset($_GET['s']) && is_string($_GET['s']) ? sanitize_text_field(wp_unslash($_GET['s'])) : '',
         ];
         // phpcs:enable
 
@@ -53,10 +53,35 @@ class CardsTable extends WP_List_Table
         $this->set_pagination_args(['total_items' => $total, 'per_page' => $perPage]);
     }
 
+    /**
+     * @return array<string, string>
+     */
+    public static function states(): array
+    {
+        return [
+            'usable' => __('Active', 'wp-woocommerce-store-balance'),
+            'spent' => __('Spent', 'wp-woocommerce-store-balance'),
+            'expired' => __('Expired', 'wp-woocommerce-store-balance'),
+            'disabled' => __('Deactivated', 'wp-woocommerce-store-balance'),
+        ];
+    }
+
     public function no_items(): void
     {
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+        if (! empty($_GET['s']) || ! empty($_GET['type']) || ! empty($_GET['status'])) {
+            esc_html_e('No cards match your search.', 'wp-woocommerce-store-balance');
+
+            return;
+        }
+
         esc_html_e('No gift cards or store credit yet.', 'wp-woocommerce-store-balance');
     }
+
+    /**
+     * The code is shown masked, as everywhere outside the card's own screen:
+     * a list is what is on screen when someone looks over a shoulder.
+     */
 
     /**
      * @param  Card  $card
@@ -64,18 +89,11 @@ class CardsTable extends WP_List_Table
     protected function column_code($card): string
     {
         return sprintf(
-            '<a class="row-title" href="%s"><code>%s</code></a>',
+            '<a class="row-title" href="%s">%s <code>%s</code></a>',
             esc_url(Admin::url(['view' => 'card', 'id' => $card->id])),
-            esc_html($card->isStoreCredit() ? '#'.$card->id : $card->formattedCode())
+            esc_html(Admin::typeLabel($card->type)),
+            esc_html($card->reference())
         );
-    }
-
-    /**
-     * @param  Card  $card
-     */
-    protected function column_type($card): string
-    {
-        return esc_html(Admin::typeLabel($card->type));
     }
 
     /**
@@ -123,6 +141,18 @@ class CardsTable extends WP_List_Table
     /**
      * @param  Card  $card
      */
+    protected function column_order($card): string
+    {
+        $order = $card->orderId ? wc_get_order($card->orderId) : null;
+
+        return $order
+            ? sprintf('<a href="%s">#%s</a>', esc_url($order->get_edit_order_url()), esc_html($order->get_order_number()))
+            : '&ndash;';
+    }
+
+    /**
+     * @param  Card  $card
+     */
     protected function column_created($card): string
     {
         return esc_html(wp_date(wc_date_format(), $card->createdAt));
@@ -154,8 +184,9 @@ class CardsTable extends WP_List_Table
         echo '<label class="screen-reader-text" for="filter-status">'.esc_html__('Filter by status', 'wp-woocommerce-store-balance').'</label>';
         echo '<select name="status" id="filter-status">';
         echo '<option value="">'.esc_html__('All statuses', 'wp-woocommerce-store-balance').'</option>';
-        printf('<option value="%s" %s>%s</option>', esc_attr(Card::STATUS_ACTIVE), selected($status, Card::STATUS_ACTIVE, false), esc_html__('Active', 'wp-woocommerce-store-balance'));
-        printf('<option value="%s" %s>%s</option>', esc_attr(Card::STATUS_DISABLED), selected($status, Card::STATUS_DISABLED, false), esc_html__('Deactivated', 'wp-woocommerce-store-balance'));
+        foreach (self::states() as $value => $label) {
+            printf('<option value="%s" %s>%s</option>', esc_attr($value), selected($status, $value, false), esc_html($label));
+        }
         echo '</select>';
 
         submit_button(__('Filter', 'wp-woocommerce-store-balance'), '', 'filter_action', false);

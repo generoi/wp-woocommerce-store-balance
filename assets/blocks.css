@@ -16,20 +16,22 @@
     border-color: #cc1818;
 }
 
+.wc-store-balance-form__button[aria-disabled='true'] {
+    opacity: 0.6;
+    cursor: progress;
+}
+
 .wc-store-balance__error {
     margin: 8px 0 0;
     color: #cc1818;
-    font-size: 0.875em;
 }
 
 .wc-store-balance__note {
     margin: 8px 0 0;
     font-size: 0.875em;
-    opacity: 0.8;
 }
 
 .wc-store-balance__note.is-success {
-    opacity: 1;
     font-weight: 600;
 }
 
@@ -42,9 +44,9 @@
 .wc-store-balance-form__code {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
+    align-items: center;
     gap: 12px;
-    padding: 8px 12px;
+    padding: 8px 4px 8px 12px;
     margin-top: 6px;
     border-radius: 4px;
     background: color-mix(in srgb, currentColor 7%, transparent);
@@ -62,24 +64,29 @@
 
 .wc-store-balance-form__code-detail {
     font-size: 0.875em;
-    opacity: 0.8;
 }
 
 .wc-store-balance-form__code.has-reason .wc-store-balance-form__code-detail {
     color: #cc1818;
-    opacity: 1;
 }
 
+/* A text button, but with the 44px a thumb needs. */
 .wc-store-balance-form__remove {
     flex: 0 0 auto;
-    padding: 0;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0 8px;
     border: 0;
     background: none;
     color: inherit;
     font: inherit;
-    font-size: 0.875em;
     text-decoration: underline;
     cursor: pointer;
+}
+
+.wc-store-balance-form__remove:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: -2px;
 }
 
 .wc-store-balance-summary__toggle-label {
@@ -89,7 +96,6 @@
 .wc-store-balance-summary__detail {
     display: block;
     font-size: 0.875em;
-    opacity: 0.8;
 }
 
 .wc-store-balance-summary__account + .wc-store-balance-summary__applied,
@@ -99,4 +105,22 @@
 
 .wc-store-balance-summary__applied .wc-block-components-totals-item__value {
     white-space: nowrap;
+}
+
+/*
+ * The details of a gift card under its cart line: one per line rather than a
+ * run of "To: … / From: … / Message: …", and wrapped rather than allowed to
+ * push the table wider than a phone.
+ */
+.wc-block-components-product-details {
+    overflow-wrap: anywhere;
+}
+
+.wc-block-cart-item__product .wc-block-components-product-details > span,
+.wc-block-components-order-summary-item .wc-block-components-product-details > span {
+    display: block;
+}
+
+.wc-block-components-product-details > span > [aria-hidden='true'] {
+    display: none;
 }

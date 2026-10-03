@@ -12,15 +12,6 @@ jQuery(function ($) {
         return;
     }
 
-    function refresh() {
-        if ($('form.checkout').length) {
-            $(document.body).trigger('update_checkout');
-        } else {
-            // The cart has no partial refresh that includes this form.
-            window.location.reload();
-        }
-    }
-
     function show($root, message, type) {
         $root.find('[data-store-balance-message]').text(message).attr('data-type', type).prop('hidden', !message);
     }
@@ -30,12 +21,33 @@ jQuery(function ($) {
 
         return $.post(config.url.replace('%%endpoint%%', endpoint), $.extend({ security: config.nonce }, data))
             .done(function (response) {
-                if (response && response.success) {
-                    refresh();
-                } else {
+                if (!response || !response.success) {
                     show($root, (response && response.data && response.data.message) || config.error, 'error');
                     $controls.prop('disabled', false);
+                    $root.find('[data-store-balance-code]').trigger('focus');
+
+                    return;
                 }
+
+                if (!$('form.checkout').length) {
+                    // The cart has no partial refresh that includes this form.
+                    window.location.reload();
+
+                    return;
+                }
+
+                // WooCommerce redraws the totals; the form is ours to redraw.
+                if (response.data && response.data.html) {
+                    var $fresh = $(response.data.html);
+
+                    $root.replaceWith($fresh);
+                    show($fresh, response.data.message || '', 'success');
+                    $fresh.find('[data-store-balance-code]').trigger('focus');
+                } else {
+                    $controls.prop('disabled', false);
+                }
+
+                $(document.body).trigger('update_checkout');
             })
             .fail(function () {
                 show($root, config.error, 'error');

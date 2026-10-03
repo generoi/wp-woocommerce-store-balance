@@ -98,6 +98,8 @@ The first returns the card, or a `WP_Error`.
 | `wc_store_balance_currencies` | Currencies offered when creating a card in the admin. |
 | `wc_store_balance_expiry_days` | Days a new card is valid for. `0` for no expiry. |
 | `wc_store_balance_delivery_time` | When a scheduled gift card is sent. |
+| `wc_store_balance_max_manual_amount` | The most an admin can put on a card in one go. |
+| `wc_store_balance_returned_balance_grace_days` | How long a card stays valid, at least, after a balance has been returned to it. |
 | `wc_store_balance_email_locale` | The locale a card email is written in. |
 | `wc_store_balance_cart_state` | The computed balance state of the cart. |
 
@@ -123,7 +125,11 @@ Everything that goes wrong is written to the WooCommerce log, under the source `
 
 1. The cart total is calculated as usual. The balance is taken off the result.
 2. When the customer places the order, the cards are debited, before payment. The gateway is only asked for what is left. If a card can no longer cover its share the checkout stops and nothing stays debited.
-3. If the order is cancelled, fails or is refunded in full, what it took is returned to the cards it came from.
+3. If the order is cancelled, fails, is refunded in full, or is trashed or deleted, what it took is returned to the cards it came from. A card that has expired in the meantime stays valid long enough to spend what came back.
+
+An order that is placed but never paid holds its share of the balance until WooCommerce cancels it (the "hold stock" time), or until the same customer places another order.
+
+Everything that changes an order's balance runs under a per-order database lock, so a payment webhook and the customer's return arriving together cannot return a balance twice or issue a gift card twice.
 
 What an order paid from a balance is kept in order meta (`_store_balance_lines`), and shown as a row in the order totals, in emails and on the order screen.
 
@@ -136,6 +142,12 @@ composer stan        # PHPStan
 composer test        # unit tests, no WordPress needed
 ```
 
+The integration suite boots WordPress and WooCommerce. `tests/bootstrap.php` finds WooCommerce in the plugins directory next to this one, so it runs in any local site against a separate test database:
+
+```sh
+WP_PHPUNIT__TESTS_CONFIG=/path/to/wp-tests-config.php composer test:integration
+```
+
 `tests/seed.php` creates a gift card product, a customer with a balance and an unredeemed code on a local site:
 
 ```sh
@@ -143,6 +155,12 @@ wp eval-file wp-content/plugins/wp-woocommerce-store-balance/tests/seed.php
 ```
 
 The scripts in `assets/` are written against the globals WooCommerce exposes and are not compiled. There is no build step.
+
+## Removing the plugin
+
+Deactivating keeps everything. While the plugin is inactive, gift card products are ordinary products sold at their lowest amount, and scheduled gift card emails are not sent, so unpublish gift card products first.
+
+Deleting the plugin keeps the two tables: they hold money the shop owes its customers. They are dropped only when the site sets `WC_REMOVE_ALL_DATA`, the same switch WooCommerce uses.
 
 ## Not in this version
 

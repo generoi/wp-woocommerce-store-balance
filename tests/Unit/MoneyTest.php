@@ -42,6 +42,10 @@ class MoneyTest extends TestCase
             'thousands with a non-breaking space' => ["1\u{00A0}000", 1000.0],
             'continental thousands' => ['1.000,50', 1000.5],
             'english thousands' => ['1,000.50', 1000.5],
+            'currency sign after' => ['50 €', 50.0],
+            'currency sign before' => ['€50', 50.0],
+            'currency code' => ['50 EUR', 50.0],
+            'someone who stopped typing' => ['25.', 25.0],
         ];
     }
 
@@ -63,11 +67,43 @@ class MoneyTest extends TestCase
             'zero' => ['0'],
             'negative' => ['-5'],
             'words' => ['fifty'],
-            'with a currency sign' => ['€50'],
+            'more decimals than the currency has' => ['25.999'],
+            'a number inside words' => ['about 50 euros'],
             'scientific notation' => ['1e3'],
             'an array' => [['50']],
             'null' => [null],
             'negative number' => [-5],
         ];
+    }
+
+    /**
+     * A balance can be corrected to nothing; an amount to add cannot be nothing.
+     *
+     * @dataProvider zeros
+     */
+    public function test_zero_is_an_answer_when_setting_a_balance(string $typed): void
+    {
+        $this->assertSame(0.0, Money::parseAllowZero($typed));
+        $this->assertNull(Money::parse($typed));
+    }
+
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function zeros(): array
+    {
+        return [
+            'plain' => ['0'],
+            'decimal comma' => ['0,00'],
+            'decimal point' => ['0.0'],
+            'with spaces' => [' 0 '],
+        ];
+    }
+
+    public function test_setting_a_balance_still_refuses_what_is_not_a_number(): void
+    {
+        $this->assertNull(Money::parseAllowZero('abc'));
+        $this->assertNull(Money::parseAllowZero('-1'));
+        $this->assertSame(7.5, Money::parseAllowZero('7,5'));
     }
 }

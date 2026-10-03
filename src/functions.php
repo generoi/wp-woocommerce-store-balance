@@ -1,8 +1,8 @@
 <?php
 
 /**
- * The public API. Code outside this plugin — a returns flow, an import, a
- * loyalty rule — should call these rather than the classes.
+ * The public API. Code outside this plugin — an import, a loyalty rule —
+ * should call these rather than the classes.
  */
 
 use GeneroWP\StoreBalance\Card;
@@ -19,17 +19,6 @@ if (! function_exists('wc_store_balance_issue_store_credit')) {
     function wc_store_balance_issue_store_credit(int $customerId, float $amount, string $currency = '', array $args = []): Card|WP_Error
     {
         return StoreCredit::issue($customerId, $amount, $currency, $args);
-    }
-}
-
-if (! function_exists('wc_store_balance_refund_order_to_store_credit')) {
-    /**
-     * Refund an order, or part of it, as store credit in the order's currency.
-     * A guest order gets a customer account.
-     */
-    function wc_store_balance_refund_order_to_store_credit(WC_Order $order, float $amount, string $note = ''): Card|WP_Error
-    {
-        return StoreCredit::refundOrder($order, $amount, $note);
     }
 }
 

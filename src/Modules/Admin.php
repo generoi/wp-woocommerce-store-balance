@@ -5,6 +5,7 @@ namespace GeneroWP\StoreBalance\Modules;
 use GeneroWP\StoreBalance\Admin\CardsTable;
 use GeneroWP\StoreBalance\Card;
 use GeneroWP\StoreBalance\CardRepository;
+use GeneroWP\StoreBalance\Input;
 use GeneroWP\StoreBalance\Logger;
 use GeneroWP\StoreBalance\Module;
 use GeneroWP\StoreBalance\Money;
@@ -24,6 +25,9 @@ class Admin implements Module
     public const CAPABILITY = 'manage_woocommerce';
 
     public const NOTICE = 'wc_store_balance_notice_';
+
+    /** @var array<string, string> What was typed into a form that came back with an error. */
+    protected array $old = [];
 
     public function register(): void
     {
@@ -99,7 +103,7 @@ class Admin implements Module
         }
 
         if (! Money::isPositive($card->balance)) {
-            return '<mark class="order-status status-on-hold"><span>'.esc_html__('Used up', 'wp-woocommerce-store-balance').'</span></mark>';
+            return '<mark class="order-status status-on-hold"><span>'.esc_html__('Spent', 'wp-woocommerce-store-balance').'</span></mark>';
         }
 
         if ($card->deliverAt && ! $card->deliveredAt && $card->deliverAt > time()) {
@@ -156,7 +160,7 @@ class Admin implements Module
         // phpcs:ignore WordPress.Security.NonceVerification.Recommended
         $view = isset($_GET['view']) ? sanitize_key($_GET['view']) : 'cards';
         $tabs = [
-            'cards' => __('All cards', 'wp-woocommerce-store-balance'),
+            'cards' => __('Cards & credits', 'wp-woocommerce-store-balance'),
             'add-credit' => __('Add store credit', 'wp-woocommerce-store-balance'),
             'add-gift-card' => __('Create gift card', 'wp-woocommerce-store-balance'),
             'settings' => __('Settings', 'wp-woocommerce-store-balance'),
@@ -208,22 +212,24 @@ class Admin implements Module
         echo '<div class="wc-store-balance-admin__summary">';
 
         if (! $outstanding) {
-            echo '<div class="wc-store-balance-admin__stat"><span>'.esc_html__('Outstanding balance', 'wp-woocommerce-store-balance').'</span><strong>'.wp_kses_post(wc_price(0)).'</strong></div>';
+            echo '<div class="wc-store-balance-admin__stat"><span>'.esc_html__('Unspent gift cards and store credit', 'wp-woocommerce-store-balance').'</span><strong>'.wp_kses_post(wc_price(0)).'</strong></div>';
         }
 
         foreach ($outstanding as $row) {
             printf(
                 '<div class="wc-store-balance-admin__stat"><span>%s</span><strong>%s</strong><small>%s</small></div>',
                 esc_html(sprintf(
-                    /* translators: 1: card type, 2: currency code */
-                    __('%1$s owed (%2$s)', 'wp-woocommerce-store-balance'),
-                    self::typeLabel($row->type),
+                    $row->type === Card::TYPE_STORE_CREDIT
+                        /* translators: %s: currency code */
+                        ? __('Unspent store credit (%s)', 'wp-woocommerce-store-balance')
+                        /* translators: %s: currency code */
+                        : __('Unspent gift cards (%s)', 'wp-woocommerce-store-balance'),
                     $row->currency
                 )),
                 wp_kses_post(wc_price((float) $row->balance, ['currency' => $row->currency])),
                 esc_html(sprintf(
                     /* translators: %d: number of cards */
-                    _n('%d card with a balance', '%d cards with a balance', (int) $row->cards, 'wp-woocommerce-store-balance'),
+                    _n('%d active card', '%d active cards', (int) $row->cards, 'wp-woocommerce-store-balance'),
                     (int) $row->cards
                 ))
             );
@@ -234,9 +240,21 @@ class Admin implements Module
         $table = new CardsTable;
         $table->prepare_items();
 
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+        $search = isset($_GET['s']) ? sanitize_text_field(Input::text(wp_unslash($_GET['s']))) : '';
+
+        if ($search !== '') {
+            echo '<p class="subtitle">'.esc_html(sprintf(
+                /* translators: %s: search term */
+                __('Search results for: %s', 'wp-woocommerce-store-balance'),
+                $search
+            )).' <a href="'.esc_url(self::url()).'">'.esc_html__('Show all', 'wp-woocommerce-store-balance').'</a></p>';
+        }
+
         echo '<form method="get">';
         echo '<input type="hidden" name="page" value="'.esc_attr(self::PAGE).'">';
-        $table->search_box(__('Search code, email or customer', 'wp-woocommerce-store-balance'), 'store-balance');
+        $table->search_box(__('Search', 'wp-woocommerce-store-balance'), 'store-balance');
+        echo '<p class="description wc-store-balance-admin__search-hint">'.esc_html__('Search by gift card code (or its last four characters), store credit number, email or customer name.', 'wp-woocommerce-store-balance').'</p>';
         $table->display();
         echo '</form>';
     }
@@ -264,11 +282,11 @@ class Admin implements Module
                 wc_price($card->initialAmount, ['currency' => $card->currency])
             ),
             __('Currency', 'wp-woocommerce-store-balance') => esc_html($card->currency),
-            __('Customer / recipient', 'wp-woocommerce-store-balance') => self::ownerHtml($card),
+            $card->isStoreCredit() ? __('Customer', 'wp-woocommerce-store-balance') : __('In the account of', 'wp-woocommerce-store-balance') => $card->customerId ? self::ownerHtml($card) : esc_html__('Nobody yet: it has not been added to an account', 'wp-woocommerce-store-balance'),
         ];
 
         if ($card->isGiftCard()) {
-            $rows[__('Code', 'wp-woocommerce-store-balance')] = '<code>'.esc_html($card->formattedCode()).'</code>';
+            $rows[__('Code', 'wp-woocommerce-store-balance')] = '<code class="wc-store-balance-admin__code">'.esc_html($card->formattedCode()).'</code>';
             $rows[__('Sent to', 'wp-woocommerce-store-balance')] = esc_html($card->recipientEmail ?: '–');
             $rows[__('From', 'wp-woocommerce-store-balance')] = esc_html($card->senderName ?: '–');
             $rows[__('Message', 'wp-woocommerce-store-balance')] = $card->message !== '' ? nl2br(esc_html($card->message)) : '–';
@@ -287,16 +305,30 @@ class Admin implements Module
                     $date($card->deliverAt)
                 ))
                 : esc_html__('Not sent', 'wp-woocommerce-store-balance'));
-        $rows[__('Valid until', 'wp-woocommerce-store-balance')] = esc_html($card->expiresAt ? $date($card->expiresAt) : __('No expiry', 'wp-woocommerce-store-balance'));
+        $rows[__('Expires', 'wp-woocommerce-store-balance')] = esc_html($card->expiresAt ? $date($card->expiresAt) : __('No expiry', 'wp-woocommerce-store-balance'));
         $rows[__('Created', 'wp-woocommerce-store-balance')] = esc_html($date($card->createdAt));
 
         if ($order) {
             $rows[__('Order', 'wp-woocommerce-store-balance')] = sprintf('<a href="%s">#%s</a>', esc_url($order->get_edit_order_url()), esc_html($order->get_order_number()));
         }
 
+        echo '<p><a href="'.esc_url(self::url()).'">&larr; '.esc_html__('All cards and credits', 'wp-woocommerce-store-balance').'</a></p>';
+
+        // A card switched off because its order was cancelled or refunded is
+        // one click from being live again. Say what that click would do.
+        if (! $card->isActive() && $order && $order->has_status(['cancelled', 'refunded', 'failed'])) {
+            echo '<div class="notice notice-warning inline"><p>'.esc_html(sprintf(
+                /* translators: 1: order number, 2: order status, 3: amount */
+                __('Deactivated because order #%1$s is %2$s. Activating it gives its owner %3$s that the shop has not been paid for.', 'wp-woocommerce-store-balance'),
+                $order->get_order_number(),
+                strtolower(wc_get_order_status_name($order->get_status())),
+                Money::plain($card->balance, $card->currency)
+            )).'</p></div>';
+        }
+
         echo '<div class="wc-store-balance-admin__columns">';
         echo '<div class="wc-store-balance-admin__main">';
-        echo '<h2>'.esc_html(self::typeLabel($card->type).' '.($card->isStoreCredit() ? '#'.$card->id : $card->maskedCode())).'</h2>';
+        echo '<h2>'.esc_html(self::typeLabel($card->type).' '.$card->reference()).'</h2>';
         echo '<table class="widefat striped wc-store-balance-admin__details"><tbody>';
         foreach ($rows as $label => $value) {
             echo '<tr><th scope="row">'.esc_html($label).'</th><td>'.wp_kses_post($value).'</td></tr>';
@@ -354,51 +386,113 @@ class Admin implements Module
 
     protected function cardActions(Card $card): void
     {
-        $form = function (string $do, string $button, string $class = 'button', string $fields = '') use ($card): void {
-            echo '<form method="post" action="'.esc_url(admin_url('admin-post.php')).'" class="wc-store-balance-admin__action">';
+        $form = function (string $do, string $button, string $class = 'button', string $fields = '', string $confirm = '', string $after = '') use ($card): void {
+            echo '<form method="post" action="'.esc_url(admin_url('admin-post.php')).'" class="wc-store-balance-admin__action"'.($confirm !== '' ? ' data-confirm="'.esc_attr($confirm).'"' : '').'>';
             wp_nonce_field('wc_store_balance_card_action');
             echo '<input type="hidden" name="action" value="wc_store_balance_card_action">';
             echo '<input type="hidden" name="id" value="'.esc_attr((string) $card->id).'">';
             echo '<input type="hidden" name="do" value="'.esc_attr($do).'">';
             echo $fields; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- built below from escaped parts.
             echo '<button type="submit" class="'.esc_attr($class).'">'.esc_html($button).'</button>';
+            echo $after; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- built below from escaped parts.
             echo '</form>';
         };
+
+        $balance = Money::plain($card->balance, $card->currency);
 
         echo '<div class="postbox"><div class="inside">';
         echo '<h3>'.esc_html__('Actions', 'wp-woocommerce-store-balance').'</h3>';
 
-        if ($card->recipientEmail !== '') {
-            $form('resend', $card->deliveredAt ? __('Send the email again', 'wp-woocommerce-store-balance') : __('Send the email now', 'wp-woocommerce-store-balance'));
+        // Only for a card that can be spent: sending the code of a dead card
+        // again tells the recipient they have money they do not have.
+        if ($card->recipientEmail !== '' && $card->isUsable()) {
+            $form(
+                'resend',
+                $card->deliveredAt ? __('Send the email again', 'wp-woocommerce-store-balance') : __('Send the email now', 'wp-woocommerce-store-balance'),
+                'button',
+                '',
+                '',
+                '<p class="description">'.esc_html(sprintf(
+                    $card->isStoreCredit()
+                        /* translators: %s: email address */
+                        ? __('Tells %s how much store credit they have. No code is sent.', 'wp-woocommerce-store-balance')
+                        /* translators: %s: email address */
+                        : __('Sends the gift card, with its code, to %s.', 'wp-woocommerce-store-balance'),
+                    $card->recipientEmail
+                )).'</p>'
+            );
         }
 
         if ($card->isActive()) {
-            $form('disable', __('Deactivate', 'wp-woocommerce-store-balance'), 'button', '<p class="description">'.esc_html__('A deactivated card cannot be spent. The balance is kept and it can be activated again.', 'wp-woocommerce-store-balance').'</p>');
+            $form(
+                'disable',
+                __('Deactivate', 'wp-woocommerce-store-balance'),
+                'button',
+                '',
+                '',
+                '<p class="description">'.esc_html__('A deactivated card cannot be spent. The balance is kept and it can be activated again.', 'wp-woocommerce-store-balance').'</p>'
+            );
         } else {
-            $form('enable', __('Activate', 'wp-woocommerce-store-balance'), 'button button-primary');
+            $form(
+                'enable',
+                __('Activate', 'wp-woocommerce-store-balance'),
+                'button',
+                '',
+                sprintf(
+                    /* translators: %s: amount */
+                    __('Activate this card? Its owner will be able to spend %s.', 'wp-woocommerce-store-balance'),
+                    $balance
+                )
+            );
         }
 
         echo '<hr>';
-        echo '<h3>'.esc_html__('Correct the balance', 'wp-woocommerce-store-balance').'</h3>';
+        echo '<h3>'.esc_html__('Change the balance', 'wp-woocommerce-store-balance').'</h3>';
 
         $form(
             'adjust',
-            __('Set balance', 'wp-woocommerce-store-balance'),
+            __('Save new balance', 'wp-woocommerce-store-balance'),
             'button',
             '<p><label for="sb-balance">'.esc_html(sprintf(
                 /* translators: %s: currency code */
                 __('New balance (%s)', 'wp-woocommerce-store-balance'),
                 $card->currency
-            )).'</label><br><input type="text" inputmode="decimal" id="sb-balance" name="balance" class="wc_input_price" value="'.esc_attr(wc_format_localized_price((string) $card->balance)).'" required></p>'
-            .'<p><label for="sb-note">'.esc_html__('Reason', 'wp-woocommerce-store-balance').'</label><br><input type="text" id="sb-note" name="note" class="regular-text" required></p>'
+            )).'</label><br><input type="text" inputmode="decimal" id="sb-balance" name="balance" class="wc_input_price" value="'.esc_attr(wc_format_localized_price(wc_format_decimal($card->balance, wc_get_price_decimals()))).'" required></p>'
+            .'<p><label for="sb-note">'.esc_html__('Reason', 'wp-woocommerce-store-balance').'</label><br><input type="text" id="sb-note" name="note" class="regular-text" required>'
+            .'<span class="description">'.esc_html__('Saved in the history. The customer does not see it.', 'wp-woocommerce-store-balance').'</span></p>',
+            sprintf(
+                /* translators: 1: current balance, 2: placeholder for the new balance typed into the form, 3: currency code */
+                __('Change the balance from %1$s to %2$s %3$s?', 'wp-woocommerce-store-balance'),
+                $balance,
+                '{balance}',
+                $card->currency
+            )
         );
 
         echo '</div></div>';
+
+        // Money-changing actions ask first. The figure typed into the form is
+        // put into the question, so a slip of the keyboard is read back.
+        ?>
+        <script>
+        document.querySelectorAll('.wc-store-balance-admin__action[data-confirm]').forEach(function (form) {
+            form.addEventListener('submit', function (event) {
+                var field = form.querySelector('[name="balance"]');
+                var message = form.dataset.confirm.replace('{balance}', field ? field.value : '');
+
+                if (!window.confirm(message)) {
+                    event.preventDefault();
+                }
+            });
+        });
+        </script>
+        <?php
     }
 
     protected function addCreditView(): void
     {
         $days = Settings::expiryDays(Card::TYPE_STORE_CREDIT);
+        $customer = absint($this->old('customer_id')) ? get_userdata(absint($this->old('customer_id'))) : null;
 
         echo '<form method="post" action="'.esc_url(admin_url('admin-post.php')).'" class="wc-store-balance-admin__form">';
         wp_nonce_field('wc_store_balance_add_credit');
@@ -407,20 +501,24 @@ class Admin implements Module
         echo '<table class="form-table" role="presentation"><tbody>';
 
         echo '<tr><th scope="row"><label for="sb-customer">'.esc_html__('Customer', 'wp-woocommerce-store-balance').'</label></th><td>';
-        echo '<select class="wc-customer-search" id="sb-customer" name="customer_id" data-placeholder="'.esc_attr__('Search for a customer…', 'wp-woocommerce-store-balance').'" data-allow_clear="true" style="width:25em" required></select>';
+        echo '<select class="wc-customer-search" id="sb-customer" name="customer_id" data-placeholder="'.esc_attr__('Search for a customer…', 'wp-woocommerce-store-balance').'" data-allow_clear="true" style="width:25em" required>';
+        if ($customer) {
+            printf('<option value="%d" selected>%s</option>', (int) $customer->ID, esc_html(sprintf('%s (#%d – %s)', trim($customer->first_name.' '.$customer->last_name) ?: $customer->display_name, $customer->ID, $customer->user_email)));
+        }
+        echo '</select>';
         echo '</td></tr>';
 
         $this->amountRows();
 
         echo '<tr><th scope="row"><label for="sb-note">'.esc_html__('Reason', 'wp-woocommerce-store-balance').'</label></th><td>';
-        echo '<input type="text" class="regular-text" id="sb-note" name="note" placeholder="'.esc_attr__('E.g. goodwill for a late delivery', 'wp-woocommerce-store-balance').'">';
-        echo '<p class="description">'.esc_html__('For your own records. The customer does not see it.', 'wp-woocommerce-store-balance').'</p>';
+        echo '<input type="text" class="regular-text" id="sb-note" name="note" value="'.esc_attr($this->old('note')).'" placeholder="'.esc_attr__('E.g. goodwill for a late delivery, order #1234', 'wp-woocommerce-store-balance').'">';
+        echo '<p class="description">'.esc_html__('Saved in the history. The customer does not see it.', 'wp-woocommerce-store-balance').'</p>';
         echo '</td></tr>';
 
         $this->expiryRow($days);
 
         echo '<tr><th scope="row">'.esc_html__('Email', 'wp-woocommerce-store-balance').'</th><td>';
-        echo '<label><input type="checkbox" name="send_email" value="1" checked> '.esc_html__('Tell the customer by email', 'wp-woocommerce-store-balance').'</label>';
+        echo '<label><input type="checkbox" name="send_email" value="1" '.checked($this->old('send_email', '1'), '1', false).'> '.esc_html__('Tell the customer by email', 'wp-woocommerce-store-balance').'</label>';
         echo '</td></tr>';
 
         echo '</tbody></table>';
@@ -441,23 +539,19 @@ class Admin implements Module
         $this->amountRows();
 
         echo '<tr><th scope="row"><label for="sb-recipient">'.esc_html__('Recipient\'s email', 'wp-woocommerce-store-balance').'</label></th><td>';
-        echo '<input type="email" class="regular-text" id="sb-recipient" name="recipient_email">';
-        echo '<p class="description">'.esc_html__('Leave empty to only create the code and hand it over yourself.', 'wp-woocommerce-store-balance').'</p>';
+        echo '<input type="email" class="regular-text" id="sb-recipient" name="recipient_email" value="'.esc_attr($this->old('recipient_email')).'">';
+        echo '<p class="description">'.esc_html__('We email the gift card to them. Leave empty to only create the code: it is shown on the next screen for you to copy and hand over.', 'wp-woocommerce-store-balance').'</p>';
         echo '</td></tr>';
 
         echo '<tr><th scope="row"><label for="sb-sender">'.esc_html__('From', 'wp-woocommerce-store-balance').'</label></th><td>';
-        echo '<input type="text" class="regular-text" id="sb-sender" name="sender_name" value="'.esc_attr(get_bloginfo('name')).'">';
+        echo '<input type="text" class="regular-text" id="sb-sender" name="sender_name" maxlength="'.esc_attr((string) GiftCardProduct::NAME_LENGTH).'" value="'.esc_attr($this->old('sender_name', get_bloginfo('name'))).'">';
         echo '</td></tr>';
 
         echo '<tr><th scope="row"><label for="sb-message">'.esc_html__('Message', 'wp-woocommerce-store-balance').'</label></th><td>';
-        echo '<textarea class="large-text" rows="3" id="sb-message" name="message" maxlength="'.esc_attr((string) GiftCardProduct::MESSAGE_LENGTH).'"></textarea>';
+        echo '<textarea class="large-text" rows="3" id="sb-message" name="message" maxlength="'.esc_attr((string) GiftCardProduct::MESSAGE_LENGTH).'">'.esc_textarea($this->old('message')).'</textarea>';
         echo '</td></tr>';
 
         $this->expiryRow($days);
-
-        echo '<tr><th scope="row">'.esc_html__('Email', 'wp-woocommerce-store-balance').'</th><td>';
-        echo '<label><input type="checkbox" name="send_email" value="1" checked> '.esc_html__('Email the gift card to the recipient', 'wp-woocommerce-store-balance').'</label>';
-        echo '</td></tr>';
 
         echo '</tbody></table>';
         submit_button(__('Create gift card', 'wp-woocommerce-store-balance'));
@@ -467,20 +561,27 @@ class Admin implements Module
     protected function amountRows(): void
     {
         $currencies = self::currencies();
+        $chosen = $this->old('currency');
 
         echo '<tr><th scope="row"><label for="sb-amount">'.esc_html__('Amount', 'wp-woocommerce-store-balance').'</label></th><td>';
-        echo '<input type="text" inputmode="decimal" class="wc_input_price" id="sb-amount" name="amount" required style="width:10em"> ';
+        echo '<span class="wc-store-balance-admin__amount">';
+        echo '<input type="text" inputmode="decimal" class="wc_input_price" id="sb-amount" name="amount" value="'.esc_attr($this->old('amount')).'" required style="width:10em"> ';
 
         if (count($currencies) > 1) {
             echo '<label class="screen-reader-text" for="sb-currency">'.esc_html__('Currency', 'wp-woocommerce-store-balance').'</label>';
             echo '<select id="sb-currency" name="currency">';
             foreach ($currencies as $currency) {
-                echo '<option value="'.esc_attr($currency).'">'.esc_html($currency).'</option>';
+                echo '<option value="'.esc_attr($currency).'" '.selected($chosen, $currency, false).'>'.esc_html($currency).'</option>';
             }
             echo '</select>';
-            echo '<p class="description">'.esc_html__('A balance can only be spent on orders in its own currency.', 'wp-woocommerce-store-balance').'</p>';
         } else {
-            echo '<input type="hidden" name="currency" value="'.esc_attr($currencies[0] ?? '').'">'.esc_html($currencies[0] ?? '');
+            echo '<input type="hidden" name="currency" value="'.esc_attr($currencies[0] ?? '').'"><span>'.esc_html($currencies[0] ?? '').'</span>';
+        }
+
+        echo '</span>';
+
+        if (count($currencies) > 1) {
+            echo '<p class="description">'.esc_html__('A balance can only be spent on orders in its own currency.', 'wp-woocommerce-store-balance').'</p>';
         }
 
         echo '</td></tr>';
@@ -488,9 +589,11 @@ class Admin implements Module
 
     protected function expiryRow(int $days): void
     {
-        echo '<tr><th scope="row"><label for="sb-expires">'.esc_html__('Valid until', 'wp-woocommerce-store-balance').'</label></th><td>';
-        echo '<input type="date" id="sb-expires" name="expires" value="'.esc_attr($days > 0 ? wp_date('Y-m-d', time() + $days * DAY_IN_SECONDS) : '').'" min="'.esc_attr(wp_date('Y-m-d', time() + DAY_IN_SECONDS)).'">';
-        echo '<p class="description">'.esc_html__('Leave empty for no expiry.', 'wp-woocommerce-store-balance').'</p>';
+        $value = $this->hasOld() ? $this->old('expires') : ($days > 0 ? wp_date('Y-m-d', time() + $days * DAY_IN_SECONDS) : '');
+
+        echo '<tr><th scope="row"><label for="sb-expires">'.esc_html__('Expires', 'wp-woocommerce-store-balance').'</label></th><td>';
+        echo '<input type="date" id="sb-expires" name="expires" value="'.esc_attr($value).'" min="'.esc_attr(wp_date('Y-m-d', time() + DAY_IN_SECONDS)).'">';
+        echo '<p class="description">'.esc_html__('The last day it can be used. Leave empty for no expiry.', 'wp-woocommerce-store-balance').'</p>';
         echo '</td></tr>';
     }
 
@@ -516,60 +619,114 @@ class Admin implements Module
         echo '</tbody></table>';
         echo '<p class="description">'.sprintf(
             /* translators: %s: link to the log screen */
-            esc_html__('Errors and refused operations are written to the %s, under the source "wp-woocommerce-store-balance".', 'wp-woocommerce-store-balance'),
+            esc_html__('Problems are recorded in the %s.', 'wp-woocommerce-store-balance'),
             '<a href="'.esc_url(admin_url('admin.php?page=wc-status&tab=logs&source='.Logger::SOURCE)).'">'.esc_html__('WooCommerce log', 'wp-woocommerce-store-balance').'</a>'
         ).'</p>';
         submit_button();
         echo '</form>';
     }
 
+    /**
+     * The most that can be put on one card by hand. A slipped key should not
+     * be able to create a card worth a hundred million.
+     */
+    public static function maxAmount(): float
+    {
+        /**
+         * Filters the largest amount an admin can put on a card in one go.
+         */
+        return (float) apply_filters('wc_store_balance_max_manual_amount', 10000);
+    }
+
+    /**
+     * The amount typed into one of the "add" forms, or a redirect back with
+     * the reason it was refused.
+     */
+    protected function postedAmount(string $view): float
+    {
+        // phpcs:ignore WordPress.Security.NonceVerification.Missing -- verified in authorize().
+        $amount = Money::parse(Input::text(wp_unslash($_POST['amount'] ?? '')));
+
+        if ($amount === null) {
+            $this->redirect(['view' => $view], __('Enter the amount as a number greater than zero, for example 25 or 24,90.', 'wp-woocommerce-store-balance'), 'error');
+        }
+
+        if ($amount > self::maxAmount()) {
+            $this->redirect(['view' => $view], sprintf(
+                /* translators: %s: amount */
+                __('The amount is too large. At most %s can be added at a time.', 'wp-woocommerce-store-balance'),
+                Money::plain(self::maxAmount(), $this->postedCurrency())
+            ), 'error');
+        }
+
+        return $amount;
+    }
+
     public function handleAddCredit(): void
     {
         $this->authorize('wc_store_balance_add_credit');
 
-        $amount = Money::parse(wp_unslash($_POST['amount'] ?? ''));
-        $customerId = absint($_POST['customer_id'] ?? 0);
+        $amount = $this->postedAmount('add-credit');
+        $customerId = absint(Input::text($_POST['customer_id'] ?? ''));
+        $customer = $customerId ? get_userdata($customerId) : null;
 
-        if ($amount === null) {
-            $this->redirect(['view' => 'add-credit'], __('Enter an amount greater than zero.', 'wp-woocommerce-store-balance'), 'error');
-        }
-
-        if (! $customerId) {
+        if (! $customer) {
             $this->redirect(['view' => 'add-credit'], __('Choose a customer.', 'wp-woocommerce-store-balance'), 'error');
         }
 
+        $expires = $this->postedExpiry('add-credit');
+        $sendEmail = ! empty($_POST['send_email']);
+
         $card = StoreCredit::issue($customerId, $amount, $this->postedCurrency(), [
-            'note' => sanitize_text_field(wp_unslash($_POST['note'] ?? '')),
-            'expires_at' => $this->postedExpiry(),
-            'send_email' => ! empty($_POST['send_email']),
+            'note' => sanitize_text_field(Input::text(wp_unslash($_POST['note'] ?? ''))),
+            'expires_at' => $expires,
+            'send_email' => false,
         ]);
 
         if (is_wp_error($card)) {
             $this->redirect(['view' => 'add-credit'], $card->get_error_message(), 'error');
         }
 
-        $this->redirect(['view' => 'card', 'id' => $card->id], sprintf(
-            /* translators: %s: amount */
-            __('%s store credit added to the customer\'s account.', 'wp-woocommerce-store-balance'),
-            wp_strip_all_tags(wc_price($card->balance, ['currency' => $card->currency]))
-        ));
+        $sent = false;
+
+        if ($sendEmail) {
+            $emails = Plugin::getInstance()->module(Emails::class);
+            $sent = $emails ? $emails->send($card) : false;
+        }
+
+        $name = trim($customer->first_name.' '.$customer->last_name) ?: $customer->display_name;
+        $message = sprintf(
+            /* translators: 1: amount, 2: customer name */
+            __('%1$s store credit added for %2$s.', 'wp-woocommerce-store-balance'),
+            Money::plain($card->balance, $card->currency),
+            $name
+        );
+
+        if ($sent) {
+            /* translators: %s: email address */
+            $message .= ' '.sprintf(__('Email sent to %s.', 'wp-woocommerce-store-balance'), $customer->user_email);
+        } elseif ($sendEmail) {
+            $message .= ' '.__('The email could not be sent; the problem has been logged.', 'wp-woocommerce-store-balance');
+        } else {
+            $message .= ' '.__('No email was sent.', 'wp-woocommerce-store-balance');
+        }
+
+        $this->redirect(['view' => 'card', 'id' => $card->id], $message);
     }
 
     public function handleAddGiftCard(): void
     {
         $this->authorize('wc_store_balance_add_gift_card');
 
-        $amount = Money::parse(wp_unslash($_POST['amount'] ?? ''));
-        $recipient = sanitize_email(wp_unslash($_POST['recipient_email'] ?? ''));
-        $rawRecipient = trim((string) wp_unslash($_POST['recipient_email'] ?? ''));
+        $amount = $this->postedAmount('add-gift-card');
+        $rawRecipient = trim(Input::text(wp_unslash($_POST['recipient_email'] ?? '')));
+        $recipient = sanitize_email($rawRecipient);
 
-        if ($amount === null) {
-            $this->redirect(['view' => 'add-gift-card'], __('Enter an amount greater than zero.', 'wp-woocommerce-store-balance'), 'error');
-        }
-
-        if ($rawRecipient !== '' && ! is_email($recipient)) {
+        if ($rawRecipient !== '' && (! is_email($recipient) || strlen($recipient) > 200)) {
             $this->redirect(['view' => 'add-gift-card'], __('Enter a valid email address for the recipient.', 'wp-woocommerce-store-balance'), 'error');
         }
+
+        $expires = $this->postedExpiry('add-gift-card');
 
         try {
             $card = Plugin::getInstance()->cards()->create([
@@ -577,26 +734,33 @@ class Admin implements Module
                 'amount' => $amount,
                 'currency' => $this->postedCurrency(),
                 'recipient_email' => $recipient,
-                'sender_name' => sanitize_text_field(wp_unslash($_POST['sender_name'] ?? '')),
-                'message' => sanitize_textarea_field(wp_unslash($_POST['message'] ?? '')),
-                'expires_at' => $this->postedExpiry(),
-                'note' => 'Created by hand',
+                'sender_name' => sanitize_text_field(Input::text(wp_unslash($_POST['sender_name'] ?? ''))),
+                'message' => sanitize_textarea_field(Input::text(wp_unslash($_POST['message'] ?? ''))),
+                'expires_at' => $expires,
+                'note' => __('Created in the admin', 'wp-woocommerce-store-balance'),
             ]);
         } catch (Throwable $e) {
             Logger::exception($e, 'Creating a gift card by hand');
             $this->redirect(['view' => 'add-gift-card'], __('The gift card could not be created. The error has been logged.', 'wp-woocommerce-store-balance'), 'error');
         }
 
-        $sent = false;
+        $back = ['view' => 'card', 'id' => $card->id];
 
-        if (! empty($_POST['send_email']) && $recipient !== '') {
-            $emails = Plugin::getInstance()->module(Emails::class);
-            $sent = $emails ? $emails->send($card) : false;
+        if ($recipient === '') {
+            $this->redirect($back, __('Gift card created. Nothing was emailed: copy the code below and hand it over.', 'wp-woocommerce-store-balance'));
         }
 
-        $this->redirect(['view' => 'card', 'id' => $card->id], $sent
-            ? __('Gift card created and emailed to the recipient.', 'wp-woocommerce-store-balance')
-            : __('Gift card created. It has not been emailed: the code is shown below.', 'wp-woocommerce-store-balance'));
+        $emails = Plugin::getInstance()->module(Emails::class);
+
+        if ($emails && $emails->send($card)) {
+            $this->redirect($back, sprintf(
+                /* translators: %s: email address */
+                __('Gift card created and emailed to %s.', 'wp-woocommerce-store-balance'),
+                $recipient
+            ));
+        }
+
+        $this->redirect($back, __('Gift card created, but the email could not be sent; the problem has been logged. Use "Send the email now", or hand over the code below.', 'wp-woocommerce-store-balance'), 'error');
     }
 
     public function handleCardAction(): void
@@ -604,7 +768,7 @@ class Admin implements Module
         $this->authorize('wc_store_balance_card_action');
 
         $cards = Plugin::getInstance()->cards();
-        $card = $cards->find(absint($_POST['id'] ?? 0));
+        $card = $cards->find(absint(Input::text($_POST['id'] ?? '')));
 
         if (! $card) {
             $this->redirect([], __('That card does not exist.', 'wp-woocommerce-store-balance'), 'error');
@@ -612,32 +776,53 @@ class Admin implements Module
 
         $back = ['view' => 'card', 'id' => $card->id];
 
-        switch (sanitize_key($_POST['do'] ?? '')) {
+        switch (sanitize_key(Input::text($_POST['do'] ?? ''))) {
             case 'disable':
-                $cards->setStatus($card->id, Card::STATUS_DISABLED, 'Deactivated by hand');
-                $this->redirect($back, __('Card deactivated.', 'wp-woocommerce-store-balance'));
+                $cards->setStatus($card->id, Card::STATUS_DISABLED, __('Deactivated in the admin', 'wp-woocommerce-store-balance'));
+                $this->redirect($back, __('Card deactivated. It can no longer be spent.', 'wp-woocommerce-store-balance'));
                 // no break
             case 'enable':
-                $cards->setStatus($card->id, Card::STATUS_ACTIVE, 'Activated by hand');
-                $this->redirect($back, __('Card activated.', 'wp-woocommerce-store-balance'));
+                $cards->setStatus($card->id, Card::STATUS_ACTIVE, __('Activated in the admin', 'wp-woocommerce-store-balance'));
+                $this->redirect($back, __('Card activated. It can be spent again.', 'wp-woocommerce-store-balance'));
                 // no break
             case 'adjust':
-                $raw = trim((string) wp_unslash($_POST['balance'] ?? ''));
-                $balance = $raw === '0' || $raw === '0,00' || $raw === '0.00' ? 0.0 : Money::parse($raw);
-                $note = sanitize_text_field(wp_unslash($_POST['note'] ?? ''));
+                $balance = Money::parseAllowZero(Input::text(wp_unslash($_POST['balance'] ?? '')));
+                $note = sanitize_text_field(Input::text(wp_unslash($_POST['note'] ?? '')));
+                $limit = max(self::maxAmount(), $card->initialAmount);
 
                 if ($balance === null) {
-                    $this->redirect($back, __('Enter the new balance as a number.', 'wp-woocommerce-store-balance'), 'error');
+                    $this->redirect($back, __('Enter the new balance as a number, for example 25 or 24,90.', 'wp-woocommerce-store-balance'), 'error');
+                }
+
+                if ($balance > $limit) {
+                    $this->redirect($back, sprintf(
+                        /* translators: %s: amount */
+                        __('The balance is too large. It can be at most %s.', 'wp-woocommerce-store-balance'),
+                        Money::plain($limit, $card->currency)
+                    ), 'error');
                 }
 
                 if ($note === '') {
-                    $this->redirect($back, __('Give a reason for the correction. It is kept in the card\'s history.', 'wp-woocommerce-store-balance'), 'error');
+                    $this->redirect($back, __('Give a reason for the change. It is kept in the card\'s history.', 'wp-woocommerce-store-balance'), 'error');
+                }
+
+                if ($balance === Money::round($card->balance)) {
+                    $this->redirect($back, __('The balance is already that amount; nothing was changed.', 'wp-woocommerce-store-balance'));
                 }
 
                 $cards->adjust($card->id, $balance, $note);
-                $this->redirect($back, __('Balance corrected.', 'wp-woocommerce-store-balance'));
+                $this->redirect($back, sprintf(
+                    /* translators: 1: old balance, 2: new balance */
+                    __('Balance changed from %1$s to %2$s.', 'wp-woocommerce-store-balance'),
+                    Money::plain($card->balance, $card->currency),
+                    Money::plain($balance, $card->currency)
+                ));
                 // no break
             case 'resend':
+                if (! $card->isUsable() || $card->recipientEmail === '') {
+                    $this->redirect($back, __('The email was not sent: this card cannot be spent.', 'wp-woocommerce-store-balance'), 'error');
+                }
+
                 $emails = Plugin::getInstance()->module(Emails::class);
 
                 if ($emails && $emails->send($card)) {
@@ -675,7 +860,7 @@ class Admin implements Module
     protected function postedCurrency(): string
     {
         // phpcs:ignore WordPress.Security.NonceVerification.Missing -- verified in authorize().
-        $currency = strtoupper(sanitize_text_field(wp_unslash($_POST['currency'] ?? '')));
+        $currency = strtoupper(sanitize_text_field(Input::text(wp_unslash($_POST['currency'] ?? ''))));
         $allowed = self::currencies();
 
         return in_array($currency, $allowed, true) ? $currency : ($allowed[0] ?? get_woocommerce_currency());
@@ -684,23 +869,50 @@ class Admin implements Module
     /**
      * End of the chosen day in the shop's timezone; null for no expiry.
      */
-    protected function postedExpiry(): ?int
+    protected function postedExpiry(string $view): ?int
     {
         // phpcs:ignore WordPress.Security.NonceVerification.Missing -- verified in authorize().
-        $value = sanitize_text_field(wp_unslash($_POST['expires'] ?? ''));
-        $date = $value !== '' ? \DateTimeImmutable::createFromFormat('!Y-m-d', $value, wp_timezone()) : false;
+        $value = sanitize_text_field(Input::text(wp_unslash($_POST['expires'] ?? '')));
 
-        return $date ? $date->setTime(23, 59, 59)->getTimestamp() : null;
+        if ($value === '') {
+            return null;
+        }
+
+        $date = \DateTimeImmutable::createFromFormat('!Y-m-d', $value, wp_timezone());
+        $time = $date ? $date->setTime(23, 59, 59)->getTimestamp() : null;
+
+        // The date field's own limit is only a hint to the browser.
+        if (! $time || $time <= time()) {
+            $this->redirect(['view' => $view], __('The expiry date has to be in the future.', 'wp-woocommerce-store-balance'), 'error');
+        }
+
+        return $time;
     }
 
     /**
+     * After an error the form is shown again with what was typed: retyping a
+     * customer, an amount and a message because of one bad field is how
+     * people end up entering the wrong amount the second time.
+     *
      * @param  array<string, mixed>  $args
      * @return never
      */
     protected function redirect(array $args, string $message = '', string $type = 'success'): void
     {
         if ($message !== '') {
-            set_transient(self::NOTICE.get_current_user_id(), ['message' => $message, 'type' => $type], MINUTE_IN_SECONDS);
+            $old = [];
+
+            if ($type === 'error') {
+                foreach (['customer_id', 'amount', 'currency', 'note', 'expires', 'recipient_email', 'sender_name', 'message'] as $key) {
+                    // phpcs:ignore WordPress.Security.NonceVerification.Missing -- verified in authorize().
+                    $old[$key] = sanitize_textarea_field(Input::text(wp_unslash($_POST[$key] ?? '')));
+                }
+
+                // phpcs:ignore WordPress.Security.NonceVerification.Missing
+                $old['send_email'] = empty($_POST['send_email']) ? '0' : '1';
+            }
+
+            set_transient(self::NOTICE.get_current_user_id(), ['message' => $message, 'type' => $type, 'old' => $old], MINUTE_IN_SECONDS);
         }
 
         wp_safe_redirect(self::url($args));
@@ -717,10 +929,22 @@ class Admin implements Module
 
         delete_transient(self::NOTICE.get_current_user_id());
 
+        $this->old = is_array($notice['old'] ?? null) ? $notice['old'] : [];
+
         printf(
             '<div class="notice notice-%s is-dismissible"><p>%s</p></div>',
             $notice['type'] === 'error' ? 'error' : 'success',
             esc_html($notice['message'])
         );
+    }
+
+    protected function hasOld(): bool
+    {
+        return $this->old !== [];
+    }
+
+    protected function old(string $key, string $default = ''): string
+    {
+        return $this->hasOld() ? (string) ($this->old[$key] ?? '') : $default;
     }
 }

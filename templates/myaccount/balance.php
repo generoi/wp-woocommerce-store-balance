@@ -30,8 +30,8 @@ $transaction_labels = [
     CardRepository::TX_RELEASE => __('Returned from an order', 'wp-woocommerce-store-balance'),
     CardRepository::TX_REFUND => __('Refunded', 'wp-woocommerce-store-balance'),
     CardRepository::TX_ADJUST => __('Adjusted by the shop', 'wp-woocommerce-store-balance'),
-    CardRepository::TX_DISABLE => __('Deactivated', 'wp-woocommerce-store-balance'),
-    CardRepository::TX_ENABLE => __('Reactivated', 'wp-woocommerce-store-balance'),
+    CardRepository::TX_DISABLE => __('Deactivated by the shop', 'wp-woocommerce-store-balance'),
+    CardRepository::TX_ENABLE => __('Reactivated by the shop', 'wp-woocommerce-store-balance'),
 ];
 ?>
 
@@ -65,7 +65,7 @@ $transaction_labels = [
                 <?php
             echo $is_gift_cards
                 ? esc_html__('You have no gift cards in your account yet. Got a code? Add it below and it will be used at checkout automatically.', 'wp-woocommerce-store-balance')
-                : esc_html__('You have no store credit. If you return an order you can choose to get store credit, and it will show up here.', 'wp-woocommerce-store-balance');
+                : esc_html__('You have no store credit. If the shop gives you credit it shows up here, and is used at checkout automatically.', 'wp-woocommerce-store-balance');
             ?>
             </p>
         <?php } ?>
@@ -147,6 +147,17 @@ $transaction_labels = [
                             </td>
                             <td data-title="<?php esc_attr_e('Valid until', 'wp-woocommerce-store-balance'); ?>">
                                 <?php echo $card->expiresAt ? esc_html(wp_date(wc_date_format(), $card->expiresAt)) : esc_html__('No expiry', 'wp-woocommerce-store-balance'); ?>
+                                <?php
+                                $days_left = $card->expiresAt ? (int) ceil(($card->expiresAt - time()) / DAY_IN_SECONDS) : null;
+
+                        if ($days_left !== null && $days_left <= 30) { ?>
+                                    <br><strong class="store-balance__expiring">
+                                        <?php
+                                /* translators: %d: number of days */
+                                printf(esc_html(_n('Expires in %d day', 'Expires in %d days', $days_left, 'wp-woocommerce-store-balance')), (int) $days_left);
+                            ?>
+                                    </strong>
+                                <?php } ?>
                             </td>
                         </tr>
                     <?php } ?>
@@ -181,6 +192,9 @@ $transaction_labels = [
                             </td>
                             <td data-title="<?php esc_attr_e('What happened', 'wp-woocommerce-store-balance'); ?>">
                                 <?php echo esc_html($transaction_labels[$transaction->type] ?? $transaction->type); ?>
+                                <?php if ($is_gift_cards && $card) { ?>
+                                    <small class="store-balance__code"><?php echo esc_html($card->maskedCode()); ?></small>
+                                <?php } ?>
                                 <?php if ($own_order) { ?>
                                     <a href="<?php echo esc_url($order->get_view_order_url()); ?>">
                                         <?php
@@ -211,7 +225,14 @@ $transaction_labels = [
             <summary>
                 <?php
                 /* translators: %d: number of cards */
-                printf(esc_html(_n('%d used or expired', '%d used or expired', count($past), 'wp-woocommerce-store-balance')), count($past));
+                printf(
+                    esc_html($is_gift_cards
+                        /* translators: %d: number of cards */
+                        ? __('Past gift cards (%d)', 'wp-woocommerce-store-balance')
+                        /* translators: %d: number of credits */
+                        : __('Past store credit (%d)', 'wp-woocommerce-store-balance')),
+                    count($past)
+                );
         ?>
             </summary>
             <ul>
@@ -222,7 +243,7 @@ $transaction_labels = [
                     echo ' &ndash; ';
 
                     if (! $card->isActive()) {
-                        esc_html_e('deactivated', 'wp-woocommerce-store-balance');
+                        esc_html_e('no longer active (contact us if you think this is a mistake)', 'wp-woocommerce-store-balance');
                     } elseif ($card->balance <= 0) {
                         esc_html_e('fully used', 'wp-woocommerce-store-balance');
                     } else {

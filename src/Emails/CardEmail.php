@@ -3,6 +3,7 @@
 namespace GeneroWP\StoreBalance\Emails;
 
 use GeneroWP\StoreBalance\Card;
+use GeneroWP\StoreBalance\Money;
 use GeneroWP\StoreBalance\Plugin;
 use WC_Email;
 
@@ -40,7 +41,9 @@ abstract class CardEmail extends WC_Email
         $switched = $locale !== '' && $locale !== determine_locale() && switch_to_locale($locale);
 
         $this->placeholders = array_merge($this->placeholders, [
-            '{amount}' => wp_strip_all_tags(wc_price($card->initialAmount, ['currency' => $card->currency])),
+            // Plain text: a subject line is not HTML, and "50,00&nbsp;&euro;"
+            // would be shown exactly like that.
+            '{amount}' => Money::plain($card->initialAmount, $card->currency),
             '{sender}' => $card->senderName,
         ]);
 
@@ -62,7 +65,9 @@ abstract class CardEmail extends WC_Email
      */
     protected function templateArgs(bool $plain): array
     {
-        $card = $this->card;
+        // WooCommerce's email preview renders the template without ever
+        // calling trigger(), so there is no card. Show a sample one.
+        $card = $this->card ?? $this->sampleCard();
 
         return [
             'card' => $card,
@@ -79,6 +84,8 @@ abstract class CardEmail extends WC_Email
     }
 
     abstract protected function accountUrl(): string;
+
+    abstract protected function sampleCard(): Card;
 
     public function get_content_html(): string
     {

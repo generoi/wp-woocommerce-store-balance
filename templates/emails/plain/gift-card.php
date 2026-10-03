@@ -15,7 +15,7 @@ use GeneroWP\StoreBalance\Card;
  */
 defined('ABSPATH') || exit;
 
-$plain_amount = wp_strip_all_tags(html_entity_decode($amount));
+$plain_amount = trim(html_entity_decode(wp_strip_all_tags($amount), ENT_QUOTES, 'UTF-8'));
 
 echo "=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=\n";
 echo esc_html(wp_strip_all_tags($email_heading));
@@ -26,7 +26,7 @@ if ($card->senderName !== '') {
     echo esc_html(sprintf(__('%1$s has sent you a gift card worth %2$s.', 'wp-woocommerce-store-balance'), $card->senderName, $plain_amount))."\n\n";
 } else {
     /* translators: %s: amount */
-    echo esc_html(sprintf(__('You have received a gift card worth %s.', 'wp-woocommerce-store-balance'), $plain_amount))."\n\n";
+    echo esc_html(sprintf(__('Here is your gift card worth %s. To give it to someone, forward this email or share the code.', 'wp-woocommerce-store-balance'), $plain_amount))."\n\n";
 }
 
 if ($card->message !== '') {
@@ -34,16 +34,16 @@ if ($card->message !== '') {
 }
 
 echo esc_html__('Your gift card code', 'wp-woocommerce-store-balance').': '.esc_html($card->formattedCode())."\n\n";
-echo esc_html__('Enter the code at checkout. It covers the order up to its value, and anything left stays on the card for next time.', 'wp-woocommerce-store-balance')."\n\n";
+echo esc_html__('Enter the code under "Have a gift card?" in the cart or at checkout. It pays for your order, up to the card\'s value, and anything left stays on the card for next time.', 'wp-woocommerce-store-balance')."\n\n";
 echo esc_html__('Start shopping', 'wp-woocommerce-store-balance').': '.esc_url_raw($shop_url)."\n";
-echo esc_html__('Save it to your account', 'wp-woocommerce-store-balance').': '.esc_url_raw($account_url)."\n\n";
+echo esc_html__('Save the gift card to your account', 'wp-woocommerce-store-balance').': '.esc_url_raw($account_url)."\n\n";
 
 if ($expires !== '') {
     /* translators: %s: date */
     echo esc_html(sprintf(__('The gift card is valid until %s.', 'wp-woocommerce-store-balance'), $expires))."\n\n";
 }
 
-echo esc_html__('Keep this email: the code is like cash, and whoever has it can spend it.', 'wp-woocommerce-store-balance')."\n\n";
+echo esc_html__('Anyone with this code can use it, so keep this email safe.', 'wp-woocommerce-store-balance')."\n\n";
 
 if ($additional_content) {
     echo esc_html(wp_strip_all_tags(wptexturize($additional_content)))."\n\n";
