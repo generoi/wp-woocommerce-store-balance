@@ -730,6 +730,81 @@ class CartTest extends TestCase
         $this->assertSame([], $this->cart()->codes());
     }
 
+    /**
+     * A family behind one address typing real, expired cards is not an
+     * attack on the shop. Only codes that do not exist count against the
+     * address; the visitor's own limit still applies to everything.
+     */
+    public function test_refusals_of_real_cards_do_not_count_against_the_address(): void
+    {
+        $expired = $this->giftCard(50, ['expires_at' => time() - 10]);
+        WC()->cart->add_to_cart($this->product()->get_id());
+
+        for ($i = 0; $i < Throttle::IP_LIMIT + 5; $i++) {
+            if ($i % (Throttle::VISITOR_LIMIT - 1) === 0) {
+                $this->actAs(0);
+            }
+
+            $this->assertSame('wc_store_balance_expired', $this->cart()->applyCode($expired->code)->get_error_code(), "Attempt {$i}");
+        }
+
+        $this->actAs(0);
+        WC()->cart->add_to_cart($this->product()->get_id());
+
+        $this->assertNotWPError($this->cart()->applyCode($this->giftCard(50)->code));
+    }
+
+    /**
+     * The address limit is for scripts that drop their cookie. Applied to
+     * accounts it would let anyone on a shared address lock every customer
+     * behind it out of their own gift cards.
+     */
+    public function test_a_logged_in_customer_is_not_locked_out_by_guesses_from_the_same_address(): void
+    {
+        for ($i = 0; $i < Throttle::IP_LIMIT; $i++) {
+            if ($i % (Throttle::VISITOR_LIMIT - 1) === 0) {
+                $this->actAs(0);
+            }
+
+            $this->cart()->applyCode('ABCD-EFGH-JKLM-NPQR');
+        }
+
+        $this->actAs(0);
+        $this->assertSame('wc_store_balance_throttled', $this->cart()->applyCode($this->giftCard(50)->code)->get_error_code());
+
+        $this->actAs($this->customer());
+        WC()->cart->add_to_cart($this->product()->get_id());
+
+        $this->assertNotWPError($this->cart()->applyCode($this->giftCard(50)->code));
+    }
+
+    /**
+     * Ten minutes from the first attempt, not from the last: a trickle of
+     * requests must not keep a visitor locked for good.
+     */
+    public function test_a_blocked_attempt_does_not_restart_the_ten_minutes(): void
+    {
+        $customerId = $this->customer();
+        $this->actAs($customerId);
+
+        for ($i = 0; $i < Throttle::VISITOR_LIMIT; $i++) {
+            $this->cart()->applyCode('ABCD-EFGH-JKLM-NPQR');
+        }
+
+        $key = 'wc_sb_try_v_'.md5((string) $customerId);
+        $expires = (int) get_option('_transient_timeout_'.$key);
+
+        $this->assertSame(Throttle::VISITOR_LIMIT, (int) get_transient($key));
+        $this->assertEqualsWithDelta(time() + Throttle::WINDOW, $expires, 5);
+
+        // Move the start of the window back; later refusals must count from it.
+        update_option('_transient_'.$key.'_t', time() - Throttle::WINDOW + 60);
+        delete_transient($key);
+        $this->cart()->applyCode('ABCD-EFGH-JKLM-NPQR');
+
+        $this->assertEqualsWithDelta(time() + 60, (int) get_option('_transient_timeout_'.$key), 5);
+    }
+
     public function test_the_state_can_be_filtered(): void
     {
         add_filter('wc_store_balance_cart_state', static function (array $state): array {

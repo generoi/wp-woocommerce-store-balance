@@ -88,11 +88,19 @@ class CardsTable extends WP_List_Table
      */
     protected function column_code($card): string
     {
+        $user = $card->customerId ? get_userdata($card->customerId) : null;
+        $who = $user ? (trim($user->first_name.' '.$user->last_name) ?: $user->display_name) : $card->recipientEmail;
+
+        // On a narrow screen WordPress shows only this column. The line under
+        // the title carries what the hidden columns would have said.
         return sprintf(
-            '<a class="row-title" href="%s">%s <code>%s</code></a>',
+            '<a class="row-title" href="%s">%s <code class="wc-store-balance-admin__ref">%s</code></a><div class="wc-store-balance-admin__row-summary">%s &middot; %s &middot; %s</div>',
             esc_url(Admin::url(['view' => 'card', 'id' => $card->id])),
             esc_html(Admin::typeLabel($card->type)),
-            esc_html($card->reference())
+            esc_html($card->reference()),
+            esc_html($who !== '' ? $who : '–'),
+            wp_kses_post(wc_price($card->balance, ['currency' => $card->currency])),
+            wp_kses_post(wp_strip_all_tags(Admin::statusHtml($card)))
         );
     }
 

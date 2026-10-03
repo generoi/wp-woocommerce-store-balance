@@ -40,12 +40,7 @@ abstract class CardEmail extends WC_Email
 
         $switched = $locale !== '' && $locale !== determine_locale() && switch_to_locale($locale);
 
-        $this->placeholders = array_merge($this->placeholders, [
-            // Plain text: a subject line is not HTML, and "50,00&nbsp;&euro;"
-            // would be shown exactly like that.
-            '{amount}' => Money::plain($card->initialAmount, $card->currency),
-            '{sender}' => $card->senderName,
-        ]);
+        $this->fillPlaceholders($card);
 
         $sent = false;
 
@@ -65,9 +60,7 @@ abstract class CardEmail extends WC_Email
      */
     protected function templateArgs(bool $plain): array
     {
-        // WooCommerce's email preview renders the template without ever
-        // calling trigger(), so there is no card. Show a sample one.
-        $card = $this->card ?? $this->sampleCard();
+        $card = $this->cardOrSample();
 
         return [
             'card' => $card,
@@ -81,6 +74,62 @@ abstract class CardEmail extends WC_Email
             'plain_text' => $plain,
             'email' => $this,
         ];
+    }
+
+    /**
+     * The subject depends on the card: a gift from someone reads differently
+     * from a card bought for oneself. WooCommerce's settings class remembers
+     * the first default it is given, so the second email of a request would
+     * get the subject of the first. Only what the shop has actually saved in
+     * the email settings is taken from there.
+     */
+    /**
+     * Plain text: a subject line is not HTML, and "50,00&nbsp;&euro;" would be
+     * shown exactly like that.
+     */
+    protected function fillPlaceholders(Card $card): void
+    {
+        $this->placeholders = array_merge($this->placeholders, [
+            '{amount}' => Money::plain($card->initialAmount, $card->currency),
+            '{sender}' => $card->senderName,
+        ]);
+    }
+
+    /**
+     * The card this email is about, or a sample one. WooCommerce's settings
+     * screen asks for the subject, the heading and a preview of the template
+     * without ever calling trigger().
+     */
+    protected function cardOrSample(): Card
+    {
+        if (! $this->card) {
+            $this->fillPlaceholders($this->sampleCard());
+        }
+
+        return $this->card ?? $this->sampleCard();
+    }
+
+    public function get_subject(): string
+    {
+        $this->cardOrSample();
+        $saved = $this->savedSetting('subject');
+
+        return (string) apply_filters('woocommerce_email_subject_'.$this->id, $this->format_string($saved !== '' ? $saved : $this->get_default_subject()), $this->object, $this);
+    }
+
+    public function get_heading(): string
+    {
+        $this->cardOrSample();
+        $saved = $this->savedSetting('heading');
+
+        return (string) apply_filters('woocommerce_email_heading_'.$this->id, $this->format_string($saved !== '' ? $saved : $this->get_default_heading()), $this->object, $this);
+    }
+
+    protected function savedSetting(string $key): string
+    {
+        $stored = get_option($this->get_option_key(), []);
+
+        return is_array($stored) && isset($stored[$key]) && is_string($stored[$key]) ? trim($stored[$key]) : '';
     }
 
     abstract protected function accountUrl(): string;

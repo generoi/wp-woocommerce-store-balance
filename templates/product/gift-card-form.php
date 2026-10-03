@@ -124,7 +124,7 @@ $error = static function (string $field) use ($errors): void {
                     data-number-message="<?php esc_attr_e('Enter the amount as a number, for example 50 or 49,90.', 'wp-woocommerce-store-balance'); ?>"
                 >
                 <?php $error('custom_amount'); ?>
-                <span id="store-balance-custom-hint" class="store-balance__hint"><?php echo esc_html($custom_range); ?></span>
+                <span id="store-balance-custom-hint" class="store-balance__hint" <?php echo isset($errors['custom_amount']) ? 'hidden' : ''; ?>><?php echo esc_html($custom_range); ?></span>
             </p>
         <?php } ?>
     </fieldset>

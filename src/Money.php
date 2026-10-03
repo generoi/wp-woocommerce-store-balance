@@ -77,9 +77,20 @@ class Money
 
         $value = preg_replace('/[\s\x{00A0}\x{202F}]+/u', '', trim($input)) ?? '';
 
-        // A currency sign or code before or after the number: "50 €", "€50",
-        // "50 EUR", "50 kr".
-        $value = preg_replace('/^(?:[\p{Sc}]|[A-Za-z]{2,3}\.?)|(?:[\p{Sc}]|[A-Za-z]{2,3}\.?)$/u', '', $value) ?? '';
+        // The shop's own currency sign or code before or after the number:
+        // "50 €", "€50", "50 EUR". Only the shop's own: "50 SEK" typed in a
+        // euro shop is not fifty euros, and neither is "$50".
+        $signs = ['€'];
+
+        if (function_exists('get_woocommerce_currency')) {
+            $signs = [
+                preg_quote(get_woocommerce_currency(), '/'),
+                preg_quote(html_entity_decode(get_woocommerce_currency_symbol(), ENT_QUOTES, 'UTF-8'), '/'),
+            ];
+        }
+
+        $sign = '(?:'.implode('|', array_filter($signs)).')\\.?';
+        $value = preg_replace('/^'.$sign.'|'.$sign.'$/iu', '', $value) ?? '';
 
         if ($value === '') {
             return null;

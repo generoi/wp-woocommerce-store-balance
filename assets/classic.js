@@ -42,7 +42,9 @@ jQuery(function ($) {
 
                     $root.replaceWith($fresh);
                     show($fresh, response.data.message || '', 'success');
-                    $fresh.find('[data-store-balance-code]').trigger('focus');
+
+                    // Back to the control that was used, in its new copy.
+                    $fresh.find(endpoint === 'store_balance_use_balance' ? '[data-store-balance-use]' : '[data-store-balance-code]').trigger('focus');
                 } else {
                     $controls.prop('disabled', false);
                 }

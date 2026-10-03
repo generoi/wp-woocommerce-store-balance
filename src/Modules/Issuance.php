@@ -355,10 +355,9 @@ class Issuance implements Module
 
         if ($card->deliverAt) {
             return sprintf(
-                /* translators: 1: date, 2: time */
-                __('Will be emailed on %1$s, around %2$s', 'wp-woocommerce-store-balance'),
-                wp_date(wc_date_format(), $card->deliverAt),
-                wp_date(wc_time_format(), $card->deliverAt)
+                /* translators: %s: date */
+                __('Will be emailed on %s, in the morning', 'wp-woocommerce-store-balance'),
+                wp_date(wc_date_format(), $card->deliverAt)
             );
         }
 

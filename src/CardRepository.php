@@ -328,7 +328,7 @@ class CardRepository
      * Works on a disabled or expired card too: money that was taken from it and
      * is being returned belongs there regardless.
      *
-     * Money returned to a card that has expired, or is about to, would be
+     * Money returned to a card that has expired in the meantime would be
      * returned to nowhere. The card gets a grace period instead, long enough
      * to spend what came back.
      *
@@ -349,15 +349,19 @@ class CardRepository
          * has been returned to it.
          */
         $grace = gmdate('Y-m-d H:i:s', time() + max(0, (int) apply_filters('wc_store_balance_returned_balance_grace_days', 30)) * DAY_IN_SECONDS);
+        $now = self::now();
 
+        // Only a card that has already expired. One that is merely close to
+        // its date keeps it: otherwise a declined payment a day before expiry
+        // would be a way to buy another month.
         $updated = $wpdb->query($wpdb->prepare(
             'UPDATE %i SET balance = (@wc_sb_balance := balance + %s), updated_at = %s,
-            expires_at = CASE WHEN expires_at IS NOT NULL AND expires_at < %s THEN %s ELSE expires_at END
+            expires_at = CASE WHEN expires_at IS NOT NULL AND expires_at <= %s THEN %s ELSE expires_at END
             WHERE id = %d',
             Install::cardsTable(),
             Money::sql($amount),
-            self::now(),
-            $grace,
+            $now,
+            $now,
             $grace,
             $id
         ));

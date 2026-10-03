@@ -7,6 +7,7 @@ use GeneroWP\StoreBalance\CardRepository;
 use GeneroWP\StoreBalance\Modules\Emails;
 use GeneroWP\StoreBalance\Modules\GiftCardProduct;
 use GeneroWP\StoreBalance\Modules\Issuance;
+use GeneroWP\StoreBalance\Plugin;
 use WC_Order;
 
 class IssuanceTest extends TestCase
@@ -461,5 +462,110 @@ class IssuanceTest extends TestCase
         $this->assertStringContainsString('Aino', $html);
         $this->assertStringNotContainsString($card->formattedCode(), $html);
         $this->assertStringNotContainsString(substr($card->code, -4), $html);
+    }
+
+    /**
+     * Part of the order was refunded, it was cancelled, and someone reopens
+     * it. Money went back to the buyer; the cards must not come back by
+     * themselves on top of it.
+     */
+    public function test_reopening_an_order_that_has_refunds_does_not_reinstate_its_cards(): void
+    {
+        $order = $this->giftCardOrder([], 2);
+        $order->payment_complete();
+        $before = array_column($this->cardsOf($order), 'id');
+
+        wc_create_refund(['order_id' => $order->get_id(), 'amount' => 50.0]);
+        wc_get_order($order->get_id())->update_status('cancelled');
+        wc_get_order($order->get_id())->update_status('completed');
+
+        $cards = $this->cardsOf($order);
+        $notes = implode("\n", array_map(static fn ($note) => $note->content, wc_get_order_notes(['order_id' => $order->get_id()])));
+
+        $this->assertSame($before, array_column($cards, 'id'));
+        $this->assertSame([Card::STATUS_DISABLED, Card::STATUS_DISABLED], array_column($cards, 'status'));
+        $this->assertStringContainsString('stay deactivated', $notes);
+    }
+
+    public function test_a_fully_refunded_order_that_is_reopened_keeps_its_cards_withdrawn(): void
+    {
+        $order = $this->giftCardOrder();
+        $order->payment_complete();
+
+        wc_create_refund(['order_id' => $order->get_id(), 'amount' => 50.0]);
+        wc_get_order($order->get_id())->update_status('completed');
+
+        $cards = $this->cardsOf($order);
+
+        $this->assertCount(1, $cards);
+        $this->assertFalse($cards[0]->isActive());
+    }
+
+    /**
+     * The webhook and the customer's return both announce the payment, each
+     * with a copy of the order loaded before the other one issued anything.
+     */
+    public function test_two_stale_copies_of_an_order_being_paid_issue_its_cards_once(): void
+    {
+        $order = $this->giftCardOrder([], 2);
+
+        $one = wc_get_order($order->get_id());
+        $two = wc_get_order($order->get_id());
+
+        $one->payment_complete();
+        $two->payment_complete();
+        Plugin::getInstance()->module(Issuance::class)->issue($two);
+
+        $this->assertCount(2, $this->cardsOf($order));
+        $this->assertCount(2, $this->emailsTo('friend@example.org'));
+    }
+
+    /**
+     * The shop owner reading the order has to be able to see why a card
+     * stopped working.
+     */
+    public function test_withdrawing_a_card_is_written_on_the_order(): void
+    {
+        $order = $this->giftCardOrder();
+        $order->payment_complete();
+        $card = $this->cardsOf($order)[0];
+
+        wc_get_order($order->get_id())->update_status('cancelled');
+
+        $notes = implode("\n", array_map(static fn ($note) => $note->content, wc_get_order_notes(['order_id' => $order->get_id()])));
+
+        $this->assertStringContainsString($card->maskedCode().' deactivated', $notes);
+        $this->assertStringNotContainsString($card->formattedCode(), $notes);
+        $this->assertDoesNotMatchRegularExpression('/&[a-z#0-9]+;/i', $notes);
+    }
+
+    /**
+     * The buyer wants to know whether the present has been sent.
+     */
+    public function test_the_order_line_says_when_the_card_was_or_will_be_emailed(): void
+    {
+        $issuance = Plugin::getInstance()->module(Issuance::class);
+        $date = (new \DateTimeImmutable('+10 days', wp_timezone()))->format('Y-m-d');
+
+        $this->addGiftCardToCart($this->giftCardProduct(), ['store_balance_amount' => '25', 'store_balance_to' => 'now@example.org']);
+        $this->addGiftCardToCart($this->giftCardProduct(), ['store_balance_amount' => '50', 'store_balance_to' => 'later@example.org', 'store_balance_delivery' => $date]);
+        $order = $this->placeOrder();
+
+        foreach ($order->get_items() as $item) {
+            $this->assertSame('', $issuance->deliveryStatus($item));
+        }
+
+        $order->payment_complete();
+        $statuses = array_values(array_map([$issuance, 'deliveryStatus'], wc_get_order($order->get_id())->get_items()));
+
+        $this->assertStringStartsWith('Emailed on', $statuses[0]);
+        $this->assertStringStartsWith('Will be emailed on', $statuses[1]);
+        // The promise is a day, not an hour the queue may not keep.
+        $this->assertDoesNotMatchRegularExpression('/\d{1,2}[:.]\d{2}/', $statuses[1]);
+
+        wc_get_order($order->get_id())->update_status('cancelled');
+        $statuses = array_values(array_map([$issuance, 'deliveryStatus'], wc_get_order($order->get_id())->get_items()));
+
+        $this->assertSame(['Cancelled', 'Cancelled'], $statuses);
     }
 }

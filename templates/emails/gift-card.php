@@ -74,7 +74,7 @@ do_action('woocommerce_email_header', $email_heading, $email); ?>
 </ol>
 
 <p style="margin: 0 0 16px;">
-    <a href="<?php echo esc_url($shop_url); ?>" style="display: inline-block; padding: 12px 24px; border-radius: 4px; background-color: #1e1e1e; color: #ffffff; font-weight: bold; text-decoration: none;"><?php esc_html_e('Start shopping', 'wp-woocommerce-store-balance'); ?></a>
+    <a href="<?php echo esc_url($shop_url); ?>" style="display: inline-block; padding: 12px 24px; border-radius: 4px; background-color: <?php echo esc_attr(get_option('woocommerce_email_base_color', '#1e1e1e') ?: '#1e1e1e'); ?>; color: #ffffff; font-weight: bold; text-decoration: none;"><?php esc_html_e('Start shopping', 'wp-woocommerce-store-balance'); ?></a>
 </p>
 
 <p>

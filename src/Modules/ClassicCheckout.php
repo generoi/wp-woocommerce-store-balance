@@ -60,12 +60,16 @@ class ClassicCheckout implements Module
                 return;
             }
 
-            printf(
-                '<tr class="store-balance-total"><th>%s</th><td data-title="%s">&minus;%s</td></tr>',
-                esc_html(Orders::label($state['lines'])),
-                esc_attr(Orders::label($state['lines'])),
-                wp_kses_post(wc_price($state['applied_total']))
-            );
+            foreach (Orders::byType($state['lines']) as $type => $amount) {
+                $label = Orders::label([['type' => $type]]);
+
+                printf(
+                    '<tr class="store-balance-total"><th>%s</th><td data-title="%s">&minus;%s</td></tr>',
+                    esc_html($label),
+                    esc_attr($label),
+                    wp_kses_post(wc_price($amount))
+                );
+            }
         });
     }
 

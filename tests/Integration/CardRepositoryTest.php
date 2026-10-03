@@ -454,4 +454,152 @@ class CardRepositoryTest extends TestCase
 
         $this->assertSame($card->id, $seen->id);
     }
+
+    /**
+     * An order paid with a card that has since expired is cancelled. Put back
+     * on an expired card the money would be returned to nowhere: the customer
+     * gets a month to spend it.
+     */
+    public function test_money_returned_to_an_expired_card_can_be_spent_for_another_month(): void
+    {
+        $card = $this->giftCard(50, ['expires_at' => time() + HOUR_IN_SECONDS]);
+        $this->cards->debit($card->id, 30);
+
+        global $wpdb;
+        $wpdb->update(Install::cardsTable(), ['expires_at' => gmdate('Y-m-d H:i:s', time() - DAY_IN_SECONDS)], ['id' => $card->id]);
+
+        $this->assertFalse($this->cards->find($card->id)->isUsable());
+        $this->assertTrue($this->cards->credit($card->id, 30));
+
+        $card = $this->cards->find($card->id);
+
+        $this->assertEqualsWithDelta(time() + 30 * DAY_IN_SECONDS, $card->expiresAt, 5);
+        $this->assertTrue($card->isUsable());
+        $this->assertTrue($this->cards->debit($card->id, 50));
+    }
+
+    /**
+     * Only a card that has already expired gets the extra month. If one that
+     * is merely close to its date got it too, a declined payment the day
+     * before expiry would be a way to buy another month.
+     */
+    public function test_money_returned_to_a_card_about_to_expire_does_not_extend_it(): void
+    {
+        $expiry = time() + 3 * DAY_IN_SECONDS;
+        $card = $this->giftCard(50, ['expires_at' => $expiry]);
+        $this->cards->debit($card->id, 30);
+
+        $this->cards->credit($card->id, 30);
+
+        $this->assertSame($expiry, $this->cards->find($card->id)->expiresAt);
+    }
+
+    /**
+     * The grace period is a floor, not a new expiry date.
+     */
+    public function test_money_returned_to_a_card_with_time_left_does_not_shorten_it(): void
+    {
+        $expiry = time() + 400 * DAY_IN_SECONDS;
+        $card = $this->giftCard(50, ['expires_at' => $expiry]);
+        $never = $this->giftCard(50, ['expires_at' => null]);
+        $this->cards->debit($card->id, 30);
+        $this->cards->debit($never->id, 30);
+
+        $this->cards->credit($card->id, 30);
+        $this->cards->credit($never->id, 30);
+
+        $this->assertSame($expiry, $this->cards->find($card->id)->expiresAt);
+        $this->assertNull($this->cards->find($never->id)->expiresAt);
+    }
+
+    public function test_the_grace_period_can_be_filtered(): void
+    {
+        add_filter('wc_store_balance_returned_balance_grace_days', static fn () => 7);
+
+        $card = $this->giftCard(50, ['expires_at' => time() - DAY_IN_SECONDS]);
+        $this->cards->credit($card->id, 30);
+
+        $this->assertEqualsWithDelta(time() + 7 * DAY_IN_SECONDS, $this->cards->find($card->id)->expiresAt, 5);
+    }
+
+    /**
+     * The history a customer sees is a bank statement. Every row's balance
+     * has to be the sum of everything above it — whichever kind of change
+     * wrote the row.
+     */
+    public function test_every_ledger_row_states_the_running_sum(): void
+    {
+        $card = $this->giftCard(100);
+
+        $this->cards->debit($card->id, 12.34);
+        $this->cards->credit($card->id, 2.34, CardRepository::TX_REFUND);
+        $this->cards->debit($card->id, 0.01);
+        $this->cards->debit($card->id, 1000);
+        $this->cards->adjust($card->id, 40);
+        $this->cards->redeem($card->id, $this->customer());
+        $this->cards->debit($card->id, 40);
+        $this->cards->credit($card->id, 15.5);
+        $this->cards->adjust($card->id, 0);
+
+        $sum = 0.0;
+
+        foreach ($this->ledger($card) as $i => $row) {
+            $sum = round($sum + (float) $row->amount, 2);
+
+            $this->assertSame($sum, (float) $row->balance_after, "Row {$i} ({$row->type})");
+        }
+
+        $this->assertSame(0.0, $this->balance($card));
+        $this->assertCount(9, $this->ledger($card));
+    }
+
+    /**
+     * "Set the balance to 40" on a card holding 100 took 60 away. The ledger
+     * has to say 60, measured against what the card held at that instant.
+     */
+    public function test_an_adjustment_records_the_difference_it_made(): void
+    {
+        $card = $this->giftCard(100);
+        $this->cards->debit($card->id, 25);
+
+        $this->assertTrue($this->cards->adjust($card->id, 40, 'Correction'));
+        $this->assertTrue($this->cards->adjust($card->id, 90));
+        $this->assertTrue($this->cards->adjust($card->id, 0));
+
+        $rows = array_slice($this->ledger($card), 2);
+
+        $this->assertSame([-35.0, 50.0, -90.0], array_map('floatval', array_column($rows, 'amount')));
+        $this->assertSame([40.0, 90.0, 0.0], array_map('floatval', array_column($rows, 'balance_after')));
+        $this->assertSame('Correction', $rows[0]->note);
+    }
+
+    public function test_an_adjustment_of_a_card_that_does_not_exist_is_refused(): void
+    {
+        $this->assertFalse($this->cards->adjust(999999, 10));
+    }
+
+    /**
+     * Characters that reorder or hide text make a name read one way in the
+     * email and another on the admin screen.
+     */
+    public function test_invisible_characters_are_stripped_from_what_is_stored(): void
+    {
+        $card = $this->giftCard(10, ['sender_name' => "Ai\u{202E}no\u{200B}", 'message' => "Hei\u{2066}!\u{FEFF}"]);
+
+        $this->assertSame('Aino', $card->senderName);
+        $this->assertSame('Hei!', $card->message);
+    }
+
+    /**
+     * Something other than a string under a key — a broken import, a filter —
+     * must not take the request down or end up as "Array" on a card.
+     */
+    public function test_a_field_that_is_not_text_is_stored_empty(): void
+    {
+        $card = $this->giftCard(10, ['sender_name' => ['a'], 'message' => ['b'], 'recipient_email' => ['c']]);
+
+        $this->assertSame('', $card->senderName);
+        $this->assertSame('', $card->message);
+        $this->assertSame('', $card->recipientEmail);
+    }
 }

@@ -5,7 +5,6 @@ namespace GeneroWP\StoreBalance\Modules;
 use Automattic\WooCommerce\StoreApi\Exceptions\RouteException;
 use Automattic\WooCommerce\StoreApi\Schemas\V1\CartSchema;
 use GeneroWP\StoreBalance\BlocksIntegration;
-use GeneroWP\StoreBalance\Card;
 use GeneroWP\StoreBalance\Input;
 use GeneroWP\StoreBalance\Logger;
 use GeneroWP\StoreBalance\Module;
@@ -80,17 +79,11 @@ class Blocks implements Module
                 $other[] = Money::plain($amount, (string) $currency);
             }
 
-            // One row per kind of balance, gift cards first.
-            $byType = [];
-            foreach ($state['lines'] ?? [] as $line) {
-                $byType[$line['type']] = ($byType[$line['type']] ?? 0) + $line['amount'];
-            }
-
+            $byType = Orders::byType($state['lines'] ?? []);
             $rows = [];
-            foreach (Card::types() as $type) {
-                if (($byType[$type] ?? 0) > 0) {
-                    $rows[] = ['label' => Orders::label([['type' => $type]]), 'amount' => $money($byType[$type])];
-                }
+
+            foreach ($byType as $type => $amount) {
+                $rows[] = ['label' => Orders::label([['type' => $type]]), 'amount' => $money($amount)];
             }
 
             return [

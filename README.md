@@ -102,6 +102,7 @@ The first returns the card, or a `WP_Error`.
 | `wc_store_balance_returned_balance_grace_days` | How long a card stays valid, at least, after a balance has been returned to it. |
 | `wc_store_balance_email_locale` | The locale a card email is written in. |
 | `wc_store_balance_cart_state` | The computed balance state of the cart. |
+| `wc_store_balance_client_ip` | The address code attempts are counted against. Set it if your proxy passes client-supplied `X-Forwarded-For` through. |
 
 ### Actions
 

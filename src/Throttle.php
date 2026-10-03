@@ -17,35 +17,65 @@ class Throttle
 {
     public const VISITOR_LIMIT = 10;
 
-    public const IP_LIMIT = 40;
+    public const IP_LIMIT = 60;
 
     public const WINDOW = 10 * MINUTE_IN_SECONDS;
 
     public static function blocked(): bool
     {
-        return (int) get_transient(self::visitorKey()) >= self::VISITOR_LIMIT
-            || (int) get_transient(self::ipKey()) >= self::IP_LIMIT;
+        if ((int) get_transient(self::visitorKey()) >= self::VISITOR_LIMIT) {
+            return true;
+        }
+
+        // A logged-in customer is held to their own limit only. The IP limit
+        // exists to stop a script that keeps changing its cookie; applied to
+        // accounts as well, it would let anyone on a shared address lock every
+        // customer behind it out of their own gift cards.
+        return ! get_current_user_id() && (int) get_transient(self::ipKey()) >= self::IP_LIMIT;
     }
 
     /**
-     * Count a code that was refused for any reason: unknown, expired, spent,
-     * or belonging to someone else. Each of those answers tells a guesser
-     * something, so each one costs an attempt.
+     * Count a refused code.
+     *
+     * Every refusal counts against the visitor: "expired", "already in an
+     * account" and "wrong currency" each tell a guesser that a code exists.
+     * Only a code that does not exist counts against the IP address, so that
+     * a household's honest mistakes with real cards do not add up to a lock
+     * on everyone behind the same address.
      */
-    public static function hit(): void
+    public static function hit(bool $unknown = true): void
     {
-        foreach ([self::visitorKey() => self::VISITOR_LIMIT, self::ipKey() => self::IP_LIMIT] as $key => $limit) {
-            $attempts = (int) get_transient($key) + 1;
+        self::count(self::visitorKey(), self::VISITOR_LIMIT, 'visitor');
 
-            set_transient($key, $attempts, self::WINDOW);
+        if ($unknown) {
+            self::count(self::ipKey(), self::IP_LIMIT, 'ip');
+        }
+    }
 
-            if ($attempts === $limit) {
-                Logger::warning('Gift card code attempts throttled', [
-                    'user_id' => get_current_user_id(),
-                    'ip' => self::ip(),
-                    'scope' => $key === self::ipKey() ? 'ip' : 'visitor',
-                ]);
-            }
+    /**
+     * A fixed window: the count expires ten minutes after its first attempt.
+     * Renewing the expiry on every attempt would let a trickle of requests
+     * keep an address locked for good.
+     */
+    protected static function count(string $key, int $limit, string $scope): void
+    {
+        $started = (int) get_transient($key.'_t');
+
+        if (! $started) {
+            $started = time();
+            set_transient($key.'_t', $started, self::WINDOW);
+        }
+
+        $attempts = (int) get_transient($key) + 1;
+
+        set_transient($key, $attempts, max(1, $started + self::WINDOW - time()));
+
+        if ($attempts === $limit) {
+            Logger::warning('Gift card code attempts throttled', [
+                'user_id' => get_current_user_id(),
+                'ip' => self::ip(),
+                'scope' => $scope,
+            ]);
         }
     }
 
@@ -67,6 +97,17 @@ class Throttle
 
     protected static function ip(): string
     {
-        return class_exists(\WC_Geolocation::class) ? (string) \WC_Geolocation::get_ip_address() : '';
+        $ip = class_exists(\WC_Geolocation::class) ? (string) \WC_Geolocation::get_ip_address() : '';
+
+        /**
+         * Filters the address attempts are counted against.
+         *
+         * WooCommerce takes it from X-Real-IP or X-Forwarded-For when they are
+         * present. That is right behind a proxy that sets them, and wrong
+         * behind one that passes the visitor's own headers through: there, a
+         * script can claim a new address with every request. A site in that
+         * position returns the address its proxy vouches for here.
+         */
+        return (string) apply_filters('wc_store_balance_client_ip', $ip);
     }
 }

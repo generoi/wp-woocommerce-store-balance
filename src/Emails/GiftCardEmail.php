@@ -65,8 +65,6 @@ class GiftCardEmail extends CardEmail
      */
     protected function accountUrl(): string
     {
-        return $this->card
-            ? add_query_arg('code', $this->card->formattedCode(), wc_get_account_endpoint_url(Account::ENDPOINT_GIFT_CARDS))
-            : '';
+        return add_query_arg('code', $this->cardOrSample()->formattedCode(), wc_get_account_endpoint_url(Account::ENDPOINT_GIFT_CARDS));
     }
 }

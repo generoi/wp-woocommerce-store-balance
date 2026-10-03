@@ -461,30 +461,81 @@ class Admin implements Module
             .'<p><label for="sb-note">'.esc_html__('Reason', 'wp-woocommerce-store-balance').'</label><br><input type="text" id="sb-note" name="note" class="regular-text" required>'
             .'<span class="description">'.esc_html__('Saved in the history. The customer does not see it.', 'wp-woocommerce-store-balance').'</span></p>',
             sprintf(
-                /* translators: 1: current balance, 2: placeholder for the new balance typed into the form, 3: currency code */
-                __('Change the balance from %1$s to %2$s %3$s?', 'wp-woocommerce-store-balance'),
+                /* translators: 1: current balance, 2: placeholder for the new balance, 3: placeholder for the difference */
+                __('Change the balance from %1$s to %2$s (%3$s)?', 'wp-woocommerce-store-balance'),
                 $balance,
                 '{balance}',
-                $card->currency
+                '{difference}'
             )
         );
 
         echo '</div></div>';
 
-        // Money-changing actions ask first. The figure typed into the form is
-        // put into the question, so a slip of the keyboard is read back.
+        // Money-changing actions ask first. The figure is read the way the
+        // server will read it and shown back with the difference, so "1.000"
+        // is confirmed as one thousand, not as whatever was typed.
         ?>
         <script>
-        document.querySelectorAll('.wc-store-balance-admin__action[data-confirm]').forEach(function (form) {
-            form.addEventListener('submit', function (event) {
-                var field = form.querySelector('[name="balance"]');
-                var message = form.dataset.confirm.replace('{balance}', field ? field.value : '');
+        (function () {
+            var current = <?php echo wp_json_encode((float) $card->balance); ?>;
+            var original = <?php echo wp_json_encode((float) $card->initialAmount); ?>;
+            var currency = <?php echo wp_json_encode($card->currency); ?>;
+            var above = <?php echo wp_json_encode(sprintf(
+                /* translators: %s: amount */
+                __('This is more than the card\'s original %s.', 'wp-woocommerce-store-balance'),
+                Money::plain($card->initialAmount, $card->currency)
+            )); ?>;
 
-                if (!window.confirm(message)) {
-                    event.preventDefault();
+            function parse(value) {
+                var v = String(value).replace(/[\s\u00A0\u202F]/g, '');
+
+                if (v.indexOf(',') > -1 && v.indexOf('.') > -1) {
+                    v = v.lastIndexOf(',') > v.lastIndexOf('.') ? v.replace(/\./g, '') : v.replace(/,/g, '');
                 }
+
+                v = v.replace(',', '.');
+
+                return /^\d+(\.\d{0,2})?$/.test(v) ? parseFloat(v) : NaN;
+            }
+
+            function money(amount) {
+                try {
+                    return new Intl.NumberFormat(document.documentElement.lang || undefined, { style: 'currency', currency: currency }).format(amount);
+                } catch (e) {
+                    return amount.toFixed(2) + ' ' + currency;
+                }
+            }
+
+            document.querySelectorAll('.wc-store-balance-admin__action[data-confirm]').forEach(function (form) {
+                form.addEventListener('submit', function (event) {
+                    var field = form.querySelector('[name="balance"]');
+                    var message = form.dataset.confirm;
+
+                    if (field) {
+                        var amount = parse(field.value);
+
+                        // Not a number: the server says so, with the form intact.
+                        if (isNaN(amount)) {
+                            return;
+                        }
+
+                        var difference = amount - current;
+
+                        message = message
+                            .replace('{balance}', money(amount))
+                            .replace('{difference}', (difference >= 0 ? '+' : '\u2212') + money(Math.abs(difference)));
+
+                        if (amount > original) {
+                            message += '\n\n' + above;
+                        }
+                    }
+
+                    if (!window.confirm(message)) {
+                        event.preventDefault();
+                    }
+                });
             });
-        });
+        })();
         </script>
         <?php
     }

@@ -44,7 +44,6 @@ class MoneyTest extends TestCase
             'english thousands' => ['1,000.50', 1000.5],
             'currency sign after' => ['50 €', 50.0],
             'currency sign before' => ['€50', 50.0],
-            'currency code' => ['50 EUR', 50.0],
             'someone who stopped typing' => ['25.', 25.0],
         ];
     }
@@ -69,6 +68,7 @@ class MoneyTest extends TestCase
             'words' => ['fifty'],
             'more decimals than the currency has' => ['25.999'],
             'a number inside words' => ['about 50 euros'],
+            'another currency' => ['50 SEK'],
             'scientific notation' => ['1e3'],
             'an array' => [['50']],
             'null' => [null],

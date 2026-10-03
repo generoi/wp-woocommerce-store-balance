@@ -113,7 +113,23 @@
             var invalid = root.querySelector('[aria-invalid="true"]');
 
             notices.scrollIntoView({ block: 'center' });
-            (invalid || notices).focus({ preventScroll: true });
+
+            // After the theme's own scripts have settled: some of them move
+            // focus to the notice themselves.
+            window.setTimeout(function () {
+                (invalid || notices).focus({ preventScroll: true });
+            }, 50);
+
+            // A gift card was added. The form came back empty; the quantity
+            // should too, or the next one is bought twice by accident.
+            if (!invalid) {
+                var form = root.closest('form');
+                var quantity = form ? form.querySelector('input.qty') : null;
+
+                if (quantity) {
+                    quantity.value = quantity.min || '1';
+                }
+            }
         }
     });
 })();

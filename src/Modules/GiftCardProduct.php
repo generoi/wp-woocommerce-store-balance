@@ -163,11 +163,11 @@ class GiftCardProduct implements Module
         echo '<div class="options_group store-balance-gift-card-options" style="display:none">';
 
         // What the last save changed or left out. The product editor does not
-        // show WooCommerce's own save errors, so they are kept and shown here.
+        // show WooCommerce's own save errors, so they are kept and shown here —
+        // until a save that has nothing to report. Clearing them on display
+        // would lose them to the editor's own background reload of this box.
         if (is_array($notices) && $notices) {
-            echo '<div class="notice notice-warning inline" style="margin:12px"><p>'.implode('<br>', array_map('esc_html', $notices)).'</p></div>';
-
-            delete_post_meta($product_object->get_id(), self::META_NOTICES);
+            echo '<div class="notice notice-warning inline" style="margin:12px"><p><strong>'.esc_html__('From the last save:', 'wp-woocommerce-store-balance').'</strong><br>'.implode('<br>', array_map('esc_html', $notices)).'</p></div>';
         }
 
         echo '<p class="form-field"><span class="description" style="margin:0;display:block">'.esc_html__('The price of a gift card is the amount the customer chooses, so the price fields are hidden. Gift cards are always virtual and sold without VAT: the VAT is charged on what the card is later spent on.', 'wp-woocommerce-store-balance').'</span></p>';
@@ -226,17 +226,27 @@ class GiftCardProduct implements Module
 
         echo '</div>';
         ?>
+        <style>
+        /*
+         * The price and tax fields do not apply to a gift card; left visible
+         * they would only say things that are not true of it. A class and a
+         * rule rather than .hide(): WooCommerce shows and hides these groups
+         * itself whenever a product option changes, and would undo it.
+         */
+        #woocommerce-product-data.store-balance-is-gift-card .options_group.pricing,
+        #woocommerce-product-data.store-balance-is-gift-card ._tax_status_field,
+        #woocommerce-product-data.store-balance-is-gift-card ._tax_class_field {
+            display: none !important;
+        }
+        </style>
         <script>
         jQuery(function ($) {
             var toggle = function () {
                 var on = $('#<?php echo esc_js(self::META_ENABLED); ?>').is(':checked') && $('#product-type').val() === 'simple';
                 $('.store-balance-gift-card-options').toggle(on);
-                // The price and tax fields do not apply to a gift card; left
-                // visible they would only say things that are not true of it.
-                $('.options_group.pricing').css('display', on ? 'none' : '');
-                $('._tax_status_field, ._tax_class_field').closest('.options_group').css('display', on ? 'none' : '');
+                $('#woocommerce-product-data').toggleClass('store-balance-is-gift-card', on);
 
-                if (on) {
+                if (on && !$('#_virtual').is(':checked')) {
                     $('#_virtual').prop('checked', true).trigger('change');
                 }
             };
@@ -280,7 +290,13 @@ class GiftCardProduct implements Module
         }
 
         if (preg_match('/[;\n]/', $input)) {
-            $tokens = preg_split('/[;\n]+/', $input);
+            $tokens = [];
+
+            // A semicolon list with a stray comma in it: "25; 50 ,100". A
+            // comma with a space on either side separates; "12,50" does not.
+            foreach (preg_split('/[;\n]+/', $input) ?: [] as $part) {
+                $tokens = array_merge($tokens, preg_split('/\s+,\s*|\s*,\s+/', $part) ?: []);
+            }
         } elseif (preg_match('/,\s/', $input)) {
             // "25, 50, 100": a comma followed by a space separates.
             $tokens = preg_split('/,\s+/', $input);
@@ -740,8 +756,11 @@ class GiftCardProduct implements Module
             $rows[] = [
                 'key' => __('Quantity', 'wp-woocommerce-store-balance'),
                 'value' => sprintf(
-                    /* translators: %d: number of gift cards */
-                    __('%d separate gift cards, all to the same recipient', 'wp-woocommerce-store-balance'),
+                    empty($item[self::CART_KEY]['to'])
+                        /* translators: %d: number of gift cards */
+                        ? __('%d separate gift cards, each emailed to you', 'wp-woocommerce-store-balance')
+                        /* translators: %d: number of gift cards */
+                        : __('%d separate gift cards, each emailed to the same recipient', 'wp-woocommerce-store-balance'),
                     $quantity
                 ),
             ];

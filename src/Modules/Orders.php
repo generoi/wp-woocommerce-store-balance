@@ -142,12 +142,21 @@ class Orders implements Module
         });
     }
 
+    /** Session key: orders this session has paid from a balance. */
+    public const SESSION_ORDERS = 'store_balance_orders';
+
     /**
      * The customer placed an order, did not pay, changed the cart and is
      * placing another. WooCommerce starts a new order for the new cart; the
      * old one would go on holding the balance until it is cancelled an hour
      * later, and this checkout would be refused for a balance that is only
      * tied up in the customer's own abandoned attempt.
+     *
+     * The old order is cancelled, not just emptied. If its payment arrives
+     * after all — the customer was at their bank in another tab — WooCommerce
+     * reopens it, and reopening re-debits the balance or, if this order has
+     * spent it by then, puts the old one on hold. Either way it cannot ship
+     * on money that was used twice.
      */
     protected function releaseAbandoned(WC_Order $current): void
     {
@@ -155,10 +164,12 @@ class Orders implements Module
             return;
         }
 
-        $ids = array_unique(array_filter([
-            absint(WC()->session->get('order_awaiting_payment')),
-            absint(WC()->session->get('store_api_draft_order')),
-        ]));
+        $remembered = WC()->session->get(self::SESSION_ORDERS, []);
+
+        $ids = array_unique(array_filter(array_map('absint', array_merge(
+            is_array($remembered) ? $remembered : [],
+            [WC()->session->get('order_awaiting_payment'), WC()->session->get('store_api_draft_order')]
+        ))));
 
         foreach ($ids as $id) {
             if ($id === $current->get_id()) {
@@ -167,25 +178,37 @@ class Orders implements Module
 
             $abandoned = wc_get_order($id);
 
-            if (! $abandoned instanceof WC_Order || ! $abandoned->has_status(['pending', 'failed', 'checkout-draft'])) {
+            if (! $abandoned instanceof WC_Order
+                || ! $abandoned->has_status(['pending', 'failed'])
+                || ! self::lines($abandoned)
+                || $abandoned->get_meta(self::META_STATE) !== self::STATE_DEBITED
+            ) {
                 continue;
             }
 
-            Lock::order($abandoned->get_id(), function () use ($abandoned): void {
-                $abandoned->read_meta_data(true);
-
-                if (self::lines($abandoned) && $abandoned->get_meta(self::META_STATE) === self::STATE_DEBITED) {
-                    $this->release($abandoned, __('Replaced by a new order', 'wp-woocommerce-store-balance'));
-
-                    // It no longer has that money behind it, so it is worth
-                    // its full price again if someone pays it after all.
-                    $abandoned->delete_meta_data(self::META_LINES);
-                    $abandoned->delete_meta_data(self::META_STATE);
-                    $abandoned->calculate_totals();
-                    $abandoned->save();
-                }
-            });
+            // The status change returns the balance, under the order's lock.
+            $abandoned->update_status('cancelled', __('The customer placed a new order instead of paying this one.', 'wp-woocommerce-store-balance'));
         }
+
+        WC()->session->set(self::SESSION_ORDERS, []);
+    }
+
+    /**
+     * Remember an order this session has paid from a balance, so that it can
+     * be found again if it is abandoned. WooCommerce's own session keys point
+     * at the newest order only.
+     */
+    protected function remember(WC_Order $order): void
+    {
+        if (! function_exists('WC') || ! WC()->session) {
+            return;
+        }
+
+        $ids = WC()->session->get(self::SESSION_ORDERS, []);
+        $ids = is_array($ids) ? array_map('absint', $ids) : [];
+        $ids[] = $order->get_id();
+
+        WC()->session->set(self::SESSION_ORDERS, array_values(array_unique($ids)));
     }
 
     /**
@@ -274,6 +297,8 @@ class Orders implements Module
         $order->delete_meta_data(self::META_PENDING);
         $order->save();
 
+        $this->remember($order);
+
         $order->add_order_note(sprintf(
             /* translators: 1: amount, 2: list of masked card codes */
             __('%1$s paid with gift card / store credit (%2$s).', 'wp-woocommerce-store-balance'),
@@ -295,7 +320,8 @@ class Orders implements Module
             $order->read_meta_data(true);
             $state = $order->get_meta(self::META_STATE);
 
-            if (in_array($to, self::RELEASE_STATUSES, true)) {
+            // HPOS trashes and restores an order as a change of status.
+            if (in_array($to, self::RELEASE_STATUSES, true) || $to === 'trash') {
                 if ($state === self::STATE_DEBITED) {
                     $this->release($order, sprintf(
                         /* translators: %s: order status */
@@ -308,8 +334,10 @@ class Orders implements Module
             }
 
             // Brought back to life — a failed payment that went through on the
-            // second attempt outside the checkout, or an admin reopening it.
-            if (in_array($from, ['cancelled', 'failed'], true) && $state === self::STATE_RELEASED) {
+            // second attempt outside the checkout, a payment that arrived for
+            // a cancelled order, or an admin reopening it. An order that is
+            // live again has to be paid again.
+            if ((in_array($from, self::RELEASE_STATUSES, true) || $from === 'trash') && $state === self::STATE_RELEASED) {
                 $this->redebit($order);
             }
         });
@@ -389,6 +417,7 @@ class Orders implements Module
         $cards = Plugin::getInstance()->cards();
         $lines = self::lines($order);
         $total = 0.0;
+        $returned = [];
 
         foreach ($lines as &$line) {
             $held = Money::round($line['amount'] - $line['restored']);
@@ -400,6 +429,7 @@ class Orders implements Module
             if ($cards->credit((int) $line['card_id'], $held, $type, ['order_id' => $order->get_id(), 'note' => $note])) {
                 $line['restored'] = Money::round($line['restored'] + $held);
                 $total += $held;
+                $returned[] = self::label([$line]).' '.$line['masked'];
             } else {
                 Logger::error('Could not return a balance to its card', [
                     'order_id' => $order->get_id(),
@@ -416,9 +446,10 @@ class Orders implements Module
 
         if ($total > 0) {
             $order->add_order_note(sprintf(
-                /* translators: %s: amount */
-                __('%s returned to the customer\'s gift card / store credit balance.', 'wp-woocommerce-store-balance'),
-                Money::plain($total, $order->get_currency())
+                /* translators: 1: amount, 2: the cards it went back to, e.g. "Gift card ••••-AB12, Store credit #75" */
+                __('%1$s returned to %2$s.', 'wp-woocommerce-store-balance'),
+                Money::plain($total, $order->get_currency()),
+                implode(', ', array_unique($returned))
             ));
         }
     }
@@ -455,9 +486,11 @@ class Orders implements Module
         if ($short > 0) {
             Logger::error('Order reopened but the balance is no longer there', ['order_id' => $order->get_id(), 'short' => $short]);
 
-            $order->add_order_note(sprintf(
+            // On hold, so that it is not packed and shipped on money that is
+            // not there. A person decides what happens next.
+            $order->update_status('on-hold', sprintf(
                 /* translators: %s: amount */
-                __('Warning: this order was reopened, but %s of the gift card / store credit it was paid with has been spent elsewhere. That amount is unpaid.', 'wp-woocommerce-store-balance'),
+                __('This order was reopened, but %s of the gift card / store credit it was paid with has been spent elsewhere. That amount is unpaid: collect it or cancel the order.', 'wp-woocommerce-store-balance'),
                 Money::plain($short, $order->get_currency())
             ));
         }
@@ -507,12 +540,16 @@ class Orders implements Module
             return $rows;
         }
 
-        $row = [
-            'store_balance' => [
-                'label' => self::label(self::lines($order)).':',
-                'value' => '-'.wc_price($applied, ['currency' => $order->get_currency()]),
-            ],
-        ];
+        // One row per kind, as in the cart: a gift card and store credit used
+        // together are shown as the two payments they were.
+        $row = [];
+
+        foreach (self::byType(self::lines($order)) as $type => $amount) {
+            $row['store_balance_'.$type] = [
+                'label' => self::label([['type' => $type]]).':',
+                'value' => '-'.wc_price($amount, ['currency' => $order->get_currency()]),
+            ];
+        }
 
         $position = array_search('order_total', array_keys($rows), true);
 
@@ -578,6 +615,33 @@ class Orders implements Module
     public static function held(WC_Order $order): float
     {
         return Money::round(array_sum(self::heldLines($order)));
+    }
+
+    /**
+     * What was paid per kind of balance, gift cards first.
+     *
+     * @param  array<int, array<string, mixed>>  $lines
+     * @return array<string, float> type => amount
+     */
+    public static function byType(array $lines): array
+    {
+        $totals = [];
+
+        foreach (Card::types() as $type) {
+            $amount = 0.0;
+
+            foreach ($lines as $line) {
+                if (($line['type'] ?? '') === $type) {
+                    $amount += (float) ($line['amount'] ?? 0);
+                }
+            }
+
+            if ($amount > 0) {
+                $totals[$type] = Money::round($amount);
+            }
+        }
+
+        return $totals;
     }
 
     /**

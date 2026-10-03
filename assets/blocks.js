@@ -132,9 +132,9 @@
             }
         }
 
+        // The message is rendered with role="alert", which announces it.
         function fail(message) {
             error[1](message);
-            speak(message, true);
             focusInput();
         }
 
@@ -465,9 +465,10 @@
 
     /**
      * The total is no longer the price of the order once a balance has paid
-     * part of it: it is what is left. Said so wherever the total is printed —
-     * including the collapsed summary at the top of the mobile checkout, which
-     * has no room for the rows above.
+     * part of it: it is what is left, and after what. Said so wherever the
+     * total is printed — including the summary at the top of the mobile
+     * checkout, which has no slot for the rows above and would otherwise show
+     * a subtotal and a total that do not add up.
      */
     var registerFilters = checkout.registerCheckoutFilters || checkout.__experimentalRegisterCheckoutFilters;
 
@@ -476,7 +477,7 @@
             totalLabel: function (label, extensions) {
                 var data = extensions && extensions[NAMESPACE];
 
-                return data && int(data.applied_total) > 0 ? t('toPay') : label;
+                return data && int(data.applied_total) > 0 ? t('toPay_' + (data.kind || 'both')) || t('toPay_both') : label;
             },
         });
     }

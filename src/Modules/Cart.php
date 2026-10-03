@@ -252,7 +252,7 @@ class Cart implements Module
         $error = $this->refusal($card);
 
         if ($error) {
-            Throttle::hit();
+            Throttle::hit($error->get_error_code() === 'wc_store_balance_invalid_code');
 
             return $error;
         }

@@ -142,11 +142,13 @@ class OrderAdmin implements Module
             return;
         }
 
-        printf(
-            '<tr><td class="label">%s:</td><td width="1%%"></td><td class="total">&minus;%s</td></tr>',
-            esc_html(Orders::label(Orders::lines($order))),
-            wp_kses_post(wc_price($applied, ['currency' => $order->get_currency()]))
-        );
+        foreach (Orders::byType(Orders::lines($order)) as $type => $amount) {
+            printf(
+                '<tr><td class="label">%s:</td><td width="1%%"></td><td class="total">&minus;%s</td></tr>',
+                esc_html(Orders::label([['type' => $type]])),
+                wp_kses_post(wc_price($amount, ['currency' => $order->get_currency()]))
+            );
+        }
     }
 
     /**

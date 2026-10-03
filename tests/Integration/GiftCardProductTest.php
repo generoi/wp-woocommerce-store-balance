@@ -72,6 +72,46 @@ class GiftCardProductTest extends TestCase
         }
     }
 
+    /**
+     * The shop's own currency may be written next to the number, the way
+     * people write prices.
+     */
+    public function test_an_amount_written_with_the_shops_currency_is_accepted(): void
+    {
+        foreach (['50 EUR', '€50', '50€', 'eur 50', '50 €'] as $typed) {
+            $result = $this->parse(['store_balance_amount' => 'custom', 'store_balance_custom_amount' => $typed]);
+
+            $this->assertSame([], $result['errors'], $typed);
+            $this->assertSame(50.0, $result['data']['amount'], $typed);
+        }
+    }
+
+    /**
+     * "50 SEK" typed in a euro shop is not fifty euros.
+     */
+    public function test_an_amount_with_another_currencys_code_is_refused(): void
+    {
+        foreach (['50 SEK', '50 kr', 'USD 50'] as $typed) {
+            $result = $this->parse(['store_balance_amount' => 'custom', 'store_balance_custom_amount' => $typed]);
+
+            $this->assertSame(['custom_amount'], array_keys($result['errors']), $typed);
+            $this->assertNull($result['data']['amount'], $typed);
+        }
+    }
+
+    /**
+     * Nor is "$50" or "£50": a sign says as much as a code does.
+     */
+    public function test_an_amount_with_another_currencys_sign_is_refused(): void
+    {
+        foreach (['$50', '£50', '50 ¥'] as $typed) {
+            $result = $this->parse(['store_balance_amount' => 'custom', 'store_balance_custom_amount' => $typed]);
+
+            $this->assertSame(['custom_amount'], array_keys($result['errors']), $typed);
+            $this->assertNull($result['data']['amount'], $typed);
+        }
+    }
+
     public function test_a_custom_amount_that_is_not_a_number_is_refused(): void
     {
         foreach (['', 'fifty', '-20', '1e3', '20 or so', '12.345'] as $typed) {
@@ -380,5 +420,289 @@ class GiftCardProductTest extends TestCase
         $this->assertFalse($product->supports('ajax_add_to_cart'));
         $this->assertStringContainsString('10', wp_strip_all_tags($product->get_price_html()));
         $this->assertStringContainsString('500', wp_strip_all_tags($product->get_price_html()));
+    }
+
+    /**
+     * A coupon for "30 off your order" is spread over the lines of the cart.
+     * The gift card line has to be left out of that, and the goods have to
+     * carry the whole discount — no cent lost or invented.
+     */
+    public function test_a_fixed_cart_coupon_on_a_mixed_cart_comes_off_the_goods_to_the_cent(): void
+    {
+        $coupon = new WC_Coupon;
+        $coupon->set_code('dev3mixed');
+        $coupon->set_discount_type('fixed_cart');
+        $coupon->set_amount(33.33);
+        $coupon->save();
+
+        WC()->cart->add_to_cart($this->product(19.99)->get_id());
+        WC()->cart->add_to_cart($this->product(45.01)->get_id());
+        $this->addGiftCardToCart($this->giftCardProduct(), ['store_balance_amount' => '25']);
+        WC()->cart->apply_coupon('dev3mixed');
+
+        $this->assertSame(56.67, $this->cartTotal());
+        $this->assertSame(33.33, round((float) WC()->cart->get_discount_total() + (float) WC()->cart->get_discount_tax(), 2));
+
+        foreach (WC()->cart->get_cart() as $item) {
+            if (! empty($item[GiftCardProduct::CART_KEY])) {
+                $this->assertSame(25.0, (float) $item['line_total']);
+                $this->assertSame((float) $item['line_subtotal'], (float) $item['line_total']);
+            }
+        }
+
+        $order = $this->placeOrder();
+        $giftLine = current(array_filter($order->get_items(), static fn ($item) => $item->get_meta(Issuance::ITEM_DATA)));
+
+        $this->assertSame(56.67, (float) $order->get_total());
+        $this->assertSame(25.0, (float) $giftLine->get_total());
+
+        wc_clear_notices();
+    }
+
+    /**
+     * Each message is printed next to the field it is about, so it has to
+     * say which field that is.
+     */
+    public function test_each_error_names_the_field_it_belongs_to(): void
+    {
+        $result = $this->parse([
+            'store_balance_amount' => '31',
+            'store_balance_to' => 'nobody',
+            'store_balance_message' => str_repeat('x', 600),
+            'store_balance_delivery' => '2001-01-01',
+        ]);
+
+        $this->assertSame(['amount', 'to', 'message', 'delivery'], array_keys($result['errors']));
+
+        $result = $this->parse(['store_balance_amount' => 'custom', 'store_balance_custom_amount' => '9']);
+
+        $this->assertSame(['custom_amount'], array_keys($result['errors']));
+
+        foreach ($result['errors'] as $message) {
+            $this->assertIsString($message);
+            $this->assertNotSame('', $message);
+        }
+    }
+
+    public function test_an_empty_custom_amount_and_one_that_is_not_a_number_get_different_answers(): void
+    {
+        $empty = $this->parse(['store_balance_amount' => 'custom', 'store_balance_custom_amount' => '']);
+        $words = $this->parse(['store_balance_amount' => 'custom', 'store_balance_custom_amount' => 'fifty']);
+
+        $this->assertNotSame($empty['errors']['custom_amount'], $words['errors']['custom_amount']);
+        // Tells the customer the range without HTML entities in it.
+        $this->assertDoesNotMatchRegularExpression('/&[a-z#0-9]+;|</i', $empty['errors']['custom_amount']);
+    }
+
+    /**
+     * Cut rather than refused: a paid order must never fail to produce its
+     * card over the length of a name.
+     */
+    public function test_a_very_long_senders_name_is_cut_not_refused(): void
+    {
+        $result = $this->parse(['store_balance_amount' => '50', 'store_balance_from' => str_repeat('ä', 300)]);
+
+        $this->assertSame([], $result['errors']);
+        $this->assertSame(str_repeat('ä', GiftCardProduct::NAME_LENGTH), $result['data']['from']);
+        $this->assertSame(100, GiftCardProduct::NAME_LENGTH);
+    }
+
+    public function test_a_recipient_address_longer_than_the_column_is_refused(): void
+    {
+        $long = str_repeat('a', 60).'@'.str_repeat('b', 60).'.'.str_repeat('c', 60).'.'.str_repeat('d', 30).'.org';
+
+        $this->assertGreaterThan(200, strlen($long));
+        $this->assertSame(['to'], array_keys($this->parse(['store_balance_amount' => '50', 'store_balance_to' => $long])['errors']));
+    }
+
+    /**
+     * `store_balance_to[]=x` is one edit of a URL away. With warnings turned
+     * into errors, as on this shop, an array where a string is expected is a
+     * 500 on the product page.
+     */
+    public function test_arrays_where_text_is_expected_are_refused_without_a_warning(): void
+    {
+        $result = $this->parse([
+            'store_balance_amount' => ['50'],
+            'store_balance_custom_amount' => ['50'],
+            'store_balance_to' => ['a@example.org'],
+            'store_balance_from' => ['Aino'],
+            'store_balance_message' => ['Hei'],
+            'store_balance_delivery' => ['2030-01-01'],
+        ]);
+
+        $this->assertSame(['amount'], array_keys($result['errors']));
+        $this->assertNull($result['data']['amount']);
+        $this->assertSame(['to' => '', 'from' => '', 'message' => '', 'delivery' => ''], array_intersect_key($result['data'], ['to' => 1, 'from' => 1, 'message' => 1, 'delivery' => 1]));
+    }
+
+    public function test_an_array_posted_from_the_product_page_does_not_reach_the_cart(): void
+    {
+        $_POST = ['store_balance_amount' => ['50'], 'store_balance_to' => ['x']];
+
+        $passed = apply_filters('woocommerce_add_to_cart_validation', true, $this->giftCardProduct()->get_id(), 1);
+
+        $_POST = [];
+
+        $this->assertFalse($passed);
+
+        wc_clear_notices();
+    }
+
+    public function test_invisible_characters_are_stripped_from_the_form(): void
+    {
+        $data = $this->parse([
+            'store_balance_amount' => '50',
+            'store_balance_from' => "Ai\u{202E}no",
+            'store_balance_message' => "On\u{200B}nea\u{2067}!",
+        ])['data'];
+
+        $this->assertSame('Aino', $data['from']);
+        $this->assertSame('Onnea!', $data['message']);
+    }
+
+    /**
+     * A comma is a decimal separator in half the world. "12,50; 20" is two
+     * amounts, and has to still be two amounts after the editor has shown
+     * them and saved them again.
+     */
+    public function test_the_amounts_survive_being_shown_and_saved_again(): void
+    {
+        update_option('woocommerce_price_decimal_sep', ',');
+        update_option('woocommerce_price_thousand_sep', ' ');
+
+        $parsed = GiftCardProduct::parseAmounts('12,50; 20');
+
+        $this->assertSame([12.5, 20.0], $parsed['amounts']);
+        $this->assertSame([], $parsed['rejected']);
+
+        $shown = GiftCardProduct::formatAmounts($parsed['amounts']);
+
+        $this->assertSame('12,50; 20', $shown);
+        $this->assertSame([12.5, 20.0], GiftCardProduct::parseAmounts($shown)['amounts']);
+        $this->assertSame($shown, GiftCardProduct::formatAmounts(GiftCardProduct::parseAmounts($shown)['amounts']));
+    }
+
+    public function test_the_amounts_survive_two_saves_of_the_product(): void
+    {
+        update_option('woocommerce_price_decimal_sep', ',');
+        update_option('woocommerce_price_thousand_sep', ' ');
+
+        $module = Plugin::getInstance()->module(GiftCardProduct::class);
+        $product = $this->product();
+        $typed = '12,50; 20; 1500; 99,90';
+
+        foreach ([1, 2] as $save) {
+            $_POST = [
+                GiftCardProduct::META_ENABLED => 'on',
+                GiftCardProduct::META_AMOUNTS => $typed,
+                GiftCardProduct::META_MIN => '10',
+                GiftCardProduct::META_MAX => '500',
+            ];
+
+            $module->saveProduct($product);
+            $product->save();
+            $product = wc_get_product($product->get_id());
+
+            $this->assertSame([12.5, 20.0, 99.9, 1500.0], $product->get_meta(GiftCardProduct::META_AMOUNTS), "Save {$save}");
+            $this->assertSame('', (string) $product->get_meta(GiftCardProduct::META_NOTICES), "Save {$save}");
+
+            // What the editor shows next time is what gets posted next time.
+            $typed = GiftCardProduct::formatAmounts($product->get_meta(GiftCardProduct::META_AMOUNTS));
+        }
+
+        $_POST = [];
+
+        $this->assertSame('12,50; 20; 99,90; 1500', $typed);
+        $this->assertSame('12.5', $product->get_regular_price());
+    }
+
+    public function test_a_shop_that_writes_decimals_with_a_point_round_trips_as_well(): void
+    {
+        update_option('woocommerce_price_decimal_sep', '.');
+        update_option('woocommerce_price_thousand_sep', ',');
+
+        $shown = GiftCardProduct::formatAmounts([12.5, 20.0, 1500.0]);
+
+        $this->assertSame([12.5, 20.0, 1500.0], GiftCardProduct::parseAmounts($shown)['amounts']);
+    }
+
+    /**
+     * The old editor asked for commas, and shop owners will keep typing them.
+     */
+    public function test_a_list_written_with_commas_is_still_understood(): void
+    {
+        $this->assertSame([25.0, 50.0, 100.0], GiftCardProduct::parseAmounts('25, 50, 100')['amounts']);
+        $this->assertSame([25.0, 50.0, 100.0], GiftCardProduct::parseAmounts('25,50,100')['amounts']);
+        $this->assertSame([25.0, 50.0], GiftCardProduct::parseAmounts("50\n25\n50")['amounts']);
+        $this->assertSame([12.5], GiftCardProduct::parseAmounts('12,50')['amounts']);
+        $this->assertSame([], GiftCardProduct::parseAmounts('  ')['amounts']);
+    }
+
+    /**
+     * What could not be read is dropped — and said so, or the shop owner
+     * finds out from a customer that the 75 € card is missing.
+     */
+    public function test_a_messy_save_tells_the_shop_owner_what_was_dropped(): void
+    {
+        $parsed = GiftCardProduct::parseAmounts('25; abc; 50; -10; 12.345');
+
+        $this->assertSame([25.0, 50.0], $parsed['amounts']);
+        $this->assertSame(['abc', '-10', '12.345'], $parsed['rejected']);
+
+        $module = Plugin::getInstance()->module(GiftCardProduct::class);
+        $product = $this->product();
+
+        $_POST = [
+            GiftCardProduct::META_ENABLED => 'on',
+            GiftCardProduct::META_AMOUNTS => 'abc; ; xyz',
+            GiftCardProduct::META_MIN => '500',
+            GiftCardProduct::META_MAX => '10',
+        ];
+        $module->saveProduct($product);
+        $_POST = [];
+
+        $notices = $product->get_meta(GiftCardProduct::META_NOTICES);
+
+        $this->assertCount(3, $notices);
+        $this->assertStringContainsString('abc, xyz', $notices[0]);
+        $this->assertSame('yes', $product->get_meta(GiftCardProduct::META_CUSTOM));
+        $this->assertSame('10', $product->get_meta(GiftCardProduct::META_MIN));
+        $this->assertSame('500', $product->get_meta(GiftCardProduct::META_MAX));
+    }
+
+    public function test_an_array_posted_to_the_product_editor_does_not_break_the_save(): void
+    {
+        $module = Plugin::getInstance()->module(GiftCardProduct::class);
+        $product = $this->product();
+
+        $_POST = [
+            GiftCardProduct::META_ENABLED => 'on',
+            GiftCardProduct::META_AMOUNTS => ['25'],
+            GiftCardProduct::META_MIN => ['1'],
+            GiftCardProduct::META_MAX => ['2'],
+            GiftCardProduct::META_EXPIRY => ['3'],
+        ];
+        $module->saveProduct($product);
+        $_POST = [];
+
+        $this->assertSame([], $product->get_meta(GiftCardProduct::META_AMOUNTS));
+        $this->assertSame('yes', $product->get_meta(GiftCardProduct::META_CUSTOM));
+    }
+
+    /**
+     * A custom amount below the cheapest preset is not a discount: nothing
+     * was ever more expensive.
+     */
+    public function test_a_custom_amount_below_the_from_price_is_not_shown_as_a_sale(): void
+    {
+        $this->addGiftCardToCart($this->giftCardProduct(), ['store_balance_amount' => 'custom', 'store_balance_custom_amount' => '10']);
+        WC()->cart->calculate_totals();
+
+        $product = current(WC()->cart->get_cart())['data'];
+
+        $this->assertFalse($product->is_on_sale());
+        $this->assertSame(10.0, (float) $product->get_price());
+        $this->assertSame((float) $product->get_price(), (float) $product->get_regular_price());
     }
 }

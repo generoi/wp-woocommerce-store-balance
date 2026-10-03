@@ -207,7 +207,7 @@ class Account implements Module
         $result = $this->claim($input, $userId);
 
         if (is_wp_error($result) && $result->get_error_code() !== 'wc_store_balance_in_account') {
-            Throttle::hit();
+            Throttle::hit($result->get_error_code() === 'wc_store_balance_invalid_code');
         }
 
         return $result;

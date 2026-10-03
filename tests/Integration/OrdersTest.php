@@ -2,8 +2,10 @@
 
 namespace GeneroWP\StoreBalance\Tests\Integration;
 
+use Automattic\WooCommerce\Utilities\OrderUtil;
 use Exception;
 use GeneroWP\StoreBalance\CardRepository;
+use GeneroWP\StoreBalance\Install;
 use GeneroWP\StoreBalance\Modules\Orders;
 
 class OrdersTest extends TestCase
@@ -102,7 +104,7 @@ class OrdersTest extends TestCase
         $this->assertSame(189.0, (float) $order->get_total());
         $this->assertSame([], Orders::lines($order));
         $this->assertSame('', $order->get_meta(Orders::META_STATE));
-        $this->assertArrayNotHasKey('store_balance', $order->get_order_item_totals());
+        $this->assertSame([], preg_grep('/^store_balance/', array_keys($order->get_order_item_totals())));
     }
 
     public function test_the_gift_cards_in_the_order_are_not_paid_from_the_balance(): void
@@ -383,14 +385,19 @@ class OrdersTest extends TestCase
         $rows = $order->get_order_item_totals();
         $keys = array_keys($rows);
 
-        $this->assertArrayHasKey('store_balance', $rows);
-        $this->assertSame('Store credit:', $rows['store_balance']['label']);
-        $this->assertStringContainsString('50', wp_strip_all_tags($rows['store_balance']['value']));
-        $this->assertStringStartsWith('-', $rows['store_balance']['value']);
-        $this->assertSame(array_search('order_total', $keys, true) - 1, array_search('store_balance', $keys, true));
+        $this->assertArrayHasKey('store_balance_store_credit', $rows);
+        $this->assertArrayNotHasKey('store_balance_giftcard', $rows);
+        $this->assertSame('Store credit:', $rows['store_balance_store_credit']['label']);
+        $this->assertStringContainsString('50', wp_strip_all_tags($rows['store_balance_store_credit']['value']));
+        $this->assertStringStartsWith('-', $rows['store_balance_store_credit']['value']);
+        $this->assertSame(array_search('order_total', $keys, true) - 1, array_search('store_balance_store_credit', $keys, true));
     }
 
-    public function test_the_totals_row_is_named_after_what_paid(): void
+    /**
+     * A gift card and store credit used together are two payments, and are
+     * shown as two — the same way the cart showed them.
+     */
+    public function test_the_order_totals_have_one_row_for_each_kind_of_balance(): void
     {
         $customerId = $this->customer();
         $this->storeCredit($customerId, 20);
@@ -407,8 +414,22 @@ class OrdersTest extends TestCase
         $this->cart()->applyCode($code->code);
         $giftOnly = $this->placeOrder();
 
-        $this->assertSame('Gift card & store credit:', $mixed->get_order_item_totals()['store_balance']['label']);
-        $this->assertSame('Gift card:', $giftOnly->get_order_item_totals()['store_balance']['label']);
+        $rows = $mixed->get_order_item_totals();
+        $keys = array_keys($rows);
+        $total = array_search('order_total', $keys, true);
+
+        $this->assertSame('Gift card:', $rows['store_balance_giftcard']['label']);
+        $this->assertSame('Store credit:', $rows['store_balance_store_credit']['label']);
+        $this->assertStringContainsString('20', wp_strip_all_tags($rows['store_balance_giftcard']['value']));
+        $this->assertStringContainsString('20', wp_strip_all_tags($rows['store_balance_store_credit']['value']));
+        $this->assertEqualsCanonicalizing(['store_balance_giftcard', 'store_balance_store_credit'], array_slice($keys, $total - 2, 2));
+        $this->assertSame(149.0, (float) $mixed->get_total());
+        $this->assertSame(['giftcard' => 20.0, 'store_credit' => 20.0], Orders::byType(Orders::lines($mixed)));
+
+        $rows = $giftOnly->get_order_item_totals();
+
+        $this->assertSame('Gift card:', $rows['store_balance_giftcard']['label']);
+        $this->assertArrayNotHasKey('store_balance_store_credit', $rows);
     }
 
     public function test_an_order_note_records_what_was_paid_from_which_card(): void
@@ -567,5 +588,312 @@ class OrdersTest extends TestCase
 
         $this->assertStringContainsString(substr($card->code, -4), $meta);
         $this->assertStringNotContainsString($card->code, $meta);
+    }
+
+    /**
+     * The same data in two shapes is two chances to get it wrong. The lines
+     * are exactly these five fields.
+     */
+    public function test_an_order_line_has_exactly_five_fields(): void
+    {
+        [$order] = $this->orderPaidPartlyWithStoreCredit(50);
+
+        $this->assertSame(['card_id', 'type', 'masked', 'amount', 'restored'], array_keys(Orders::lines($order)[0]));
+        $this->assertSame(['card_id', 'type', 'masked', 'amount', 'restored'], array_keys($order->get_meta(Orders::META_LINES)[0]));
+    }
+
+    protected function usesOrderTables(): bool
+    {
+        return OrderUtil::custom_orders_table_usage_is_enabled();
+    }
+
+    protected function untrash(\WC_Order $order): void
+    {
+        if ($this->usesOrderTables()) {
+            $order->get_data_store()->untrash_order($order);
+        } else {
+            wp_untrash_post($order->get_id());
+        }
+    }
+
+    /**
+     * An order can leave without ever being cancelled: an admin tidying up
+     * moves it to the trash. It was holding the customer's money.
+     */
+    public function test_trashing_an_order_gives_the_balance_back(): void
+    {
+        [$order, $card] = $this->orderPaidPartlyWithStoreCredit(50);
+        $order->update_status('on-hold');
+        $orderId = $order->get_id();
+
+        $order->delete(false);
+
+        $this->assertSame(50.0, $this->balance($card));
+        $this->assertSame(CardRepository::TX_RELEASE, $this->ledger($card)[2]->type);
+        $this->assertSame($orderId, (int) $this->ledger($card)[2]->order_id);
+    }
+
+    public function test_an_order_taken_out_of_the_trash_takes_the_balance_again(): void
+    {
+        [$order, $card] = $this->orderPaidPartlyWithStoreCredit(50);
+        $order->update_status('on-hold');
+        $orderId = $order->get_id();
+        $order->delete(false);
+
+        $this->untrash(wc_get_order($orderId));
+
+        $restored = wc_get_order($orderId);
+
+        $this->assertSame('on-hold', $restored->get_status());
+        $this->assertSame(0.0, $this->balance($card));
+        $this->assertSame(50.0, Orders::held($restored));
+        $this->assertSame(
+            [CardRepository::TX_ISSUE, CardRepository::TX_DEBIT, CardRepository::TX_RELEASE, CardRepository::TX_DEBIT],
+            $this->ledgerTypes($card)
+        );
+    }
+
+    public function test_deleting_an_order_for_good_gives_the_balance_back(): void
+    {
+        [$order, $card] = $this->orderPaidPartlyWithStoreCredit(50);
+        $order->update_status('processing');
+        $orderId = $order->get_id();
+
+        $order->delete(true);
+
+        $this->assertSame(50.0, $this->balance($card));
+        $this->assertFalse(wc_get_order($orderId));
+    }
+
+    /**
+     * Trash, then "Delete permanently": two hooks for one order.
+     */
+    public function test_trashing_and_then_deleting_gives_the_balance_back_once(): void
+    {
+        [$order, $card] = $this->orderPaidPartlyWithStoreCredit(50);
+        $order->update_status('on-hold');
+        $orderId = $order->get_id();
+
+        $order->delete(false);
+        wc_get_order($orderId)->delete(true);
+
+        $this->assertSame(50.0, $this->balance($card));
+        $this->assertSame([CardRepository::TX_ISSUE, CardRepository::TX_DEBIT, CardRepository::TX_RELEASE], $this->ledgerTypes($card));
+    }
+
+    public function test_a_cancelled_order_taken_out_of_the_trash_stays_released(): void
+    {
+        [$order, $card] = $this->orderPaidPartlyWithStoreCredit(50);
+        $order->update_status('cancelled');
+        $orderId = $order->get_id();
+        $order->delete(false);
+
+        $this->untrash(wc_get_order($orderId));
+
+        $this->assertSame(50.0, $this->balance($card));
+    }
+
+    public function test_trashing_an_order_that_used_no_balance_or_another_post_does_nothing(): void
+    {
+        WC()->cart->add_to_cart($this->product()->get_id());
+        $order = $this->placeOrder();
+        $postId = self::factory()->post->create();
+
+        $order->delete(false);
+        wp_trash_post($postId);
+        wp_untrash_post($postId);
+        wp_delete_post($postId, true);
+
+        $this->assertNull(get_post($postId));
+    }
+
+    /**
+     * The order that was refused still exists, with a "pay for order" link.
+     * Left at the reduced total it could be paid for less than the goods
+     * cost, with no balance behind the difference.
+     */
+    public function test_a_refused_checkout_leaves_the_order_at_its_full_price_with_nothing_staged(): void
+    {
+        $customerId = $this->customer();
+        $card = $this->storeCredit($customerId, 50);
+
+        $this->actAs($customerId);
+        WC()->cart->add_to_cart($this->product()->get_id());
+
+        $order = $this->createOrderFromCart();
+
+        $this->assertSame(139.0, (float) $order->get_total());
+
+        $this->cards->debit($card->id, 50);
+
+        try {
+            $this->processOrder($order);
+            $this->fail('The checkout went through.');
+        } catch (Exception $e) {
+            $order = wc_get_order($order->get_id());
+        }
+
+        $this->assertSame(189.0, (float) $order->get_total());
+        $this->assertSame('', $order->get_meta(Orders::META_PENDING));
+        $this->assertSame([], Orders::lines($order));
+        $this->assertSame(38.4, round((float) $order->get_total_tax(), 2));
+
+        $order->calculate_totals();
+
+        $this->assertSame(189.0, (float) $order->get_total());
+    }
+
+    /**
+     * A staged balance is a plan, not a payment. On anything but the
+     * checkout's own draft it is a leftover, and an order must never be made
+     * cheaper by money that was not taken.
+     */
+    public function test_a_staged_balance_does_not_lower_the_total_of_an_order_that_is_not_a_draft(): void
+    {
+        $staged = [['card_id' => 1, 'type' => 'giftcard', 'masked' => '••••-AAAA', 'amount' => 50.0, 'restored' => 0.0]];
+
+        foreach (['pending', 'on-hold', 'processing', 'failed'] as $status) {
+            $order = wc_create_order(['status' => $status]);
+            $order->add_product($this->product(), 1);
+            $order->update_meta_data(Orders::META_PENDING, $staged);
+            $order->calculate_totals();
+
+            $this->assertSame(189.0, (float) $order->get_total(), $status);
+        }
+
+        $draft = wc_create_order(['status' => 'checkout-draft']);
+        $draft->add_product($this->product(), 1);
+        $draft->update_meta_data(Orders::META_PENDING, $staged);
+        $draft->calculate_totals();
+
+        $this->assertSame(139.0, (float) $draft->get_total());
+    }
+
+    /**
+     * The abandoned attempt is cancelled, not left lying around as an unpaid
+     * order at a price that assumed a balance it no longer has.
+     */
+    public function test_an_abandoned_order_is_cancelled_when_it_gives_its_balance_back(): void
+    {
+        [$order, $card] = $this->orderPaidPartlyWithStoreCredit(50);
+
+        WC()->session->set('order_awaiting_payment', $order->get_id());
+        WC()->cart->add_to_cart($this->product(29)->get_id());
+
+        $retried = $this->placeOrder();
+        $abandoned = wc_get_order($order->get_id());
+
+        $this->assertNotSame($abandoned->get_id(), $retried->get_id());
+        $this->assertSame('cancelled', $abandoned->get_status());
+        $this->assertFalse($abandoned->needs_payment());
+        $this->assertSame(0.0, Orders::held($abandoned));
+        $this->assertSame(
+            [CardRepository::TX_ISSUE, CardRepository::TX_DEBIT, CardRepository::TX_RELEASE, CardRepository::TX_DEBIT],
+            $this->ledgerTypes($card)
+        );
+        $this->assertSame([$order->get_id(), $order->get_id(), $retried->get_id()], array_map('intval', array_column(array_slice($this->ledger($card), 1), 'order_id')));
+        $this->assertSame(0.0, $this->balance($card));
+    }
+
+    /**
+     * Only the customer's own abandoned attempt in this session is let go.
+     * Another unpaid order of theirs — a bank transfer they are about to
+     * make — keeps what it holds.
+     */
+    public function test_an_unpaid_order_that_is_not_this_sessions_is_left_alone(): void
+    {
+        $customerId = $this->customer();
+        $card = $this->storeCredit($customerId, 80);
+
+        $this->actAs($customerId);
+        WC()->cart->add_to_cart($this->product(50)->get_id());
+        $first = $this->placeOrder();
+
+        // A new visit: nothing is awaiting payment in this session.
+        $this->actAs($customerId);
+        WC()->cart->add_to_cart($this->product(189)->get_id());
+        $second = $this->placeOrder();
+
+        $first = wc_get_order($first->get_id());
+
+        $this->assertSame(50.0, Orders::held($first));
+        $this->assertSame(0.0, (float) $first->get_total());
+        $this->assertSame(30.0, Orders::held($second));
+        $this->assertSame(159.0, (float) $second->get_total());
+        $this->assertSame(0.0, $this->balance($card));
+    }
+
+    public function test_an_order_already_paid_is_not_released_even_if_the_session_still_points_at_it(): void
+    {
+        [$order, $card] = $this->orderPaidPartlyWithStoreCredit(50);
+        $order->update_status('processing');
+
+        WC()->session->set('order_awaiting_payment', $order->get_id());
+        WC()->cart->empty_cart();
+        WC()->cart->add_to_cart($this->product(29)->get_id());
+        $this->placeOrder();
+
+        $this->assertSame(50.0, Orders::held(wc_get_order($order->get_id())));
+        $this->assertSame(0.0, $this->balance($card));
+    }
+
+    /**
+     * A gateway's webhook and the customer's return both cancel the order,
+     * each from its own copy loaded before the other finished. Each copy
+     * says "debited". Only what is in the database decides.
+     */
+    public function test_two_stale_copies_of_an_order_cancelling_it_return_the_balance_once(): void
+    {
+        [$order, $card] = $this->orderPaidPartlyWithStoreCredit(50);
+
+        $one = wc_get_order($order->get_id());
+        $two = wc_get_order($order->get_id());
+
+        $one->update_status('cancelled');
+        $two->update_status('failed');
+
+        $this->assertSame(50.0, $this->balance($card));
+        $this->assertSame([CardRepository::TX_ISSUE, CardRepository::TX_DEBIT, CardRepository::TX_RELEASE], $this->ledgerTypes($card));
+    }
+
+    public function test_the_ledger_adds_up_through_the_whole_life_of_an_order(): void
+    {
+        [$order, $card] = $this->orderPaidPartlyWithStoreCredit(80, 50);
+
+        $orderId = $order->get_id();
+
+        $order->update_status('cancelled');
+        wc_get_order($orderId)->update_status('processing');
+        wc_get_order($orderId)->delete(false);
+        $this->untrash(wc_get_order($orderId));
+        wc_get_order($orderId)->update_status('refunded');
+
+        $sum = 0.0;
+
+        foreach ($this->ledger($card) as $i => $row) {
+            $sum = round($sum + (float) $row->amount, 2);
+
+            $this->assertSame($sum, (float) $row->balance_after, "Row {$i} ({$row->type})");
+        }
+
+        $this->assertSame(80.0, $this->balance($card));
+        $this->assertCount(7, $this->ledger($card));
+    }
+
+    /**
+     * The order was placed while the card was good and cancelled after it
+     * expired. The customer gets the money back in a form they can use.
+     */
+    public function test_a_cancelled_order_returns_its_balance_to_an_expired_card_in_usable_form(): void
+    {
+        global $wpdb;
+
+        [$order, $card, $customerId] = $this->orderPaidPartlyWithStoreCredit(50);
+
+        $wpdb->update(Install::cardsTable(), ['expires_at' => gmdate('Y-m-d H:i:s', time() - DAY_IN_SECONDS)], ['id' => $card->id]);
+
+        $order->update_status('cancelled');
+
+        $this->assertSame(50.0, wc_store_balance_get_customer_balance($customerId, 'EUR'));
     }
 }

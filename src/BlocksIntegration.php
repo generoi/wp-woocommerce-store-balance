@@ -101,7 +101,9 @@ class BlocksIntegration implements IntegrationInterface
                 'onlyGiftCards' => __('Gift cards and store credit cannot be used to buy gift cards.', 'wp-woocommerce-store-balance'),
                 /* translators: %s: amount */
                 'excluded' => __('The gift card in your cart (%s) cannot be paid with a gift card or store credit, so that part is paid another way.', 'wp-woocommerce-store-balance'),
-                'toPay' => __('Left to pay', 'wp-woocommerce-store-balance'),
+                'toPay_giftcard' => __('Left to pay after gift card', 'wp-woocommerce-store-balance'),
+                'toPay_store_credit' => __('Left to pay after store credit', 'wp-woocommerce-store-balance'),
+                'toPay_both' => __('Left to pay after gift card and store credit', 'wp-woocommerce-store-balance'),
                 'covered_giftcard' => __('Your gift card covers this order. Nothing more to pay.', 'wp-woocommerce-store-balance'),
                 'covered_store_credit' => __('Your store credit covers this order. Nothing more to pay.', 'wp-woocommerce-store-balance'),
                 'covered_both' => __('Your gift card and store credit cover this order. Nothing more to pay.', 'wp-woocommerce-store-balance'),

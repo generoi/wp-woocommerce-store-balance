@@ -258,4 +258,59 @@ class AccountTest extends TestCase
         $this->assertStringNotContainsString($credit->formattedCode(), $creditPage);
         $this->assertNotSame('', $gift->code);
     }
+
+    /**
+     * One guesser, two forms. Five tries at the checkout and five in My
+     * Account are ten tries.
+     */
+    public function test_attempts_at_the_checkout_and_in_my_account_are_counted_together(): void
+    {
+        $customerId = $this->customer();
+        $card = $this->giftCard(50);
+
+        $this->actAs($customerId);
+        WC()->cart->add_to_cart($this->product()->get_id());
+
+        for ($i = 0; $i < Throttle::VISITOR_LIMIT / 2; $i++) {
+            $this->assertSame('wc_store_balance_invalid_code', $this->cart()->applyCode('ABCD-EFGH-JKLM-NPQR')->get_error_code());
+            $this->assertSame('wc_store_balance_invalid_code', $this->redeem('ABCD-EFGH-JKLM-NPQR', $customerId)->get_error_code());
+        }
+
+        $this->assertSame('wc_store_balance_throttled', $this->redeem($card->code, $customerId)->get_error_code());
+        $this->assertSame('wc_store_balance_throttled', $this->cart()->applyCode($card->code)->get_error_code());
+    }
+
+    public function test_nine_wrong_codes_still_leave_room_for_the_right_one(): void
+    {
+        $customerId = $this->customer();
+        $card = $this->giftCard(50);
+
+        $this->actAs($customerId);
+
+        for ($i = 0; $i < Throttle::VISITOR_LIMIT - 1; $i++) {
+            $this->redeem('ABCD-EFGH-JKLM-NPQR', $customerId);
+        }
+
+        $this->assertInstanceOf(Card::class, $this->redeem($card->code, $customerId));
+    }
+
+    /**
+     * Someone else's wrong guesses are not this customer's problem, as long
+     * as the address they share has not been used up.
+     */
+    public function test_one_visitors_attempts_do_not_block_another(): void
+    {
+        $guesser = $this->customer();
+        $customerId = $this->customer();
+
+        $this->actAs($guesser);
+
+        for ($i = 0; $i < Throttle::VISITOR_LIMIT; $i++) {
+            $this->redeem('ABCD-EFGH-JKLM-NPQR', $guesser);
+        }
+
+        $this->actAs($customerId);
+
+        $this->assertInstanceOf(Card::class, $this->redeem($this->giftCard(50)->code, $customerId));
+    }
 }

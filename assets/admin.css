@@ -89,3 +89,23 @@
 .wc-store-balance-admin .notice.inline {
     margin: 12px 0;
 }
+
+.wc-store-balance-admin__ref {
+    white-space: nowrap;
+}
+
+.wc-store-balance-admin__row-summary {
+    display: none;
+    margin-top: 4px;
+    color: #646970;
+}
+
+@media screen and (max-width: 782px) {
+    .wc-store-balance-admin__row-summary {
+        display: block;
+    }
+
+    .wc-store-balance-admin__search-hint {
+        text-align: left;
+    }
+}
