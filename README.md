@@ -62,6 +62,8 @@ Each card has a currency: the currency of the order that bought it, or the one c
 
 There is no conversion between currencies.
 
+With a currency switcher that converts product prices as they are read, the amount of a gift card line is left alone: the customer chose it in the currency they are shopping in. Tested with WOOCS (FOX) in four currencies.
+
 The amounts on a gift card product are plain numbers. A shop with several currencies returns the right set for each:
 
 ```php

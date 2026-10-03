@@ -46,6 +46,9 @@ class GiftCardProduct implements Module
     /** Whether this request added a gift card to the cart. */
     protected bool $added = false;
 
+    /** @var \WeakMap<WC_Product, string>|null The chosen amount of each gift card line in the cart, by its product object. */
+    protected ?\WeakMap $pinned = null;
+
     public function register(): void
     {
         // Product editor.
@@ -70,6 +73,10 @@ class GiftCardProduct implements Module
         add_filter('woocommerce_add_to_cart_validation', [$this, 'validate'], 20, 3);
         add_filter('woocommerce_add_cart_item_data', [$this, 'cartItemData'], 20, 2);
         add_action('woocommerce_before_calculate_totals', [$this, 'setPrices'], 20);
+
+        foreach (['price', 'regular_price', 'sale_price'] as $prop) {
+            add_filter('woocommerce_product_get_'.$prop, [$this, 'pinnedPrice'], PHP_INT_MAX, 2);
+        }
         add_filter('woocommerce_get_item_data', [$this, 'itemData'], 20, 2);
         add_action('woocommerce_store_api_validate_add_to_cart', [$this, 'validateStoreApi'], 20, 2);
         add_action('woocommerce_checkout_create_order_line_item', [$this, 'orderLineItem'], 20, 3);
@@ -728,8 +735,31 @@ class GiftCardProduct implements Module
                 $item['data']->set_regular_price($amount);
                 $item['data']->set_sale_price('');
                 $item['data']->set_price($amount);
+
+                $this->pinned ??= new \WeakMap;
+                $this->pinned[$item['data']] = $amount;
             }
         }
+    }
+
+    /**
+     * The amount is in the currency the customer is shopping in: they typed
+     * "500" on a page showing kronor. A currency switcher converts every
+     * product price from the shop's base currency as it is read, and would
+     * turn those 500 kronor into five thousand. The price of a gift card line
+     * is the amount chosen and nothing else, so it is given back unchanged
+     * after every other filter has run.
+     *
+     * Keyed on the product object of the cart line, not on the product: the
+     * same gift card product can be in the cart twice with different amounts.
+     */
+    public function pinnedPrice($price, $product)
+    {
+        if ($this->pinned === null || ! $product instanceof WC_Product || ! isset($this->pinned[$product])) {
+            return $price;
+        }
+
+        return current_filter() === 'woocommerce_product_get_sale_price' ? '' : $this->pinned[$product];
     }
 
     /**
