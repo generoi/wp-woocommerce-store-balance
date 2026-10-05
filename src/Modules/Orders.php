@@ -40,6 +40,15 @@ class Orders implements Module
     /** Statuses in which the order does not hold the customer's money. */
     public const RELEASE_STATUSES = ['cancelled', 'failed', 'refunded'];
 
+    /**
+     * Statuses in which the order counts as placed and (to be) paid, so the
+     * balance it was placed with has to be on it.
+     */
+    public const HELD_STATUSES = ['processing', 'completed', 'on-hold'];
+
+    /** What a reopened order could not take back from its cards; unpaid. */
+    public const META_SHORT = '_store_balance_short';
+
     public function register(): void
     {
         // Classic checkout.
@@ -51,6 +60,19 @@ class Orders implements Module
         add_action('woocommerce_store_api_checkout_order_processed', [$this, 'process'], 20);
 
         add_action('woocommerce_order_status_changed', [$this, 'statusChanged'], 20, 4);
+
+        // Before a payment is recorded, so that an order which cannot take
+        // its balance back never reaches "processing" at all.
+        add_action('woocommerce_pre_payment_complete', [$this, 'beforePaymentComplete'], 5);
+        add_filter('woocommerce_payment_complete_order_status', [$this, 'paymentCompleteStatus'], PHP_INT_MAX, 3);
+        add_action('woocommerce_order_status_processing', [$this, 'shortfallSettled'], 5, 2);
+        add_action('woocommerce_order_status_completed', [$this, 'shortfallSettled'], 5, 2);
+
+        // The "pay for order" page.
+        add_action('before_woocommerce_pay', [$this, 'beforePayPage'], 5);
+        add_action('woocommerce_before_pay_action', [$this, 'beforePayAction'], 5);
+
+        add_filter('woocommerce_order_fully_refunded_status', [$this, 'fullyRefundedStatus'], 20, 2);
 
         // An order can leave without ever being cancelled: trashed or deleted
         // while it still holds a balance. HPOS and the posts table announce
@@ -82,7 +104,7 @@ class Orders implements Module
                 'card_id' => (int) $line['card_id'],
                 'type' => (string) $line['type'],
                 'masked' => (string) $line['masked'],
-                'amount' => Money::round($line['amount']),
+                'amount' => Money::exact($line['amount']),
                 'restored' => 0.0,
             ], $lines));
         } else {
@@ -102,7 +124,10 @@ class Orders implements Module
         // knows nothing about the balance. The cart total does; without this
         // an order the balance covers in full would still demand a payment
         // method.
-        if (function_exists('WC') && WC()->cart) {
+        //
+        // Only when a balance is applied. An order without one keeps the
+        // total WooCommerce worked out from its own lines.
+        if ($order->get_meta(self::META_PENDING) && function_exists('WC') && WC()->cart) {
             $order->set_total(wc_format_decimal(max(0, Money::round((float) WC()->cart->get_total('edit')))));
         }
 
@@ -259,7 +284,7 @@ class Orders implements Module
             foreach ($done as $undo) {
                 $cards->credit((int) $undo['card_id'], (float) $undo['amount'], CardRepository::TX_RELEASE, [
                     'order_id' => $order->get_id(),
-                    'note' => 'Checkout aborted',
+                    'note' => __('Checkout aborted', 'wp-woocommerce-store-balance'),
                 ]);
             }
 
@@ -309,7 +334,7 @@ class Orders implements Module
 
     public function statusChanged(int $orderId, string $from, string $to, $order): void
     {
-        if (! $order instanceof WC_Order || ! self::lines($order)) {
+        if (! $order instanceof WC_Order || (! self::lines($order) && ! $order->get_meta(self::META_PENDING))) {
             return;
         }
 
@@ -322,6 +347,13 @@ class Orders implements Module
 
             // HPOS trashes and restores an order as a change of status.
             if (in_array($to, self::RELEASE_STATUSES, true) || $to === 'trash') {
+                // A paid order put in the trash is being tidied away, not
+                // undone: the goods were delivered and the balance paid for
+                // them.
+                if ($to === 'trash' && in_array($from, wc_get_is_paid_statuses(), true)) {
+                    return;
+                }
+
                 if ($state === self::STATE_DEBITED) {
                     $this->release($order, $to === 'trash' ? __('Order removed', 'wp-woocommerce-store-balance') : sprintf(
                         /* translators: %s: order status */
@@ -333,14 +365,260 @@ class Orders implements Module
                 return;
             }
 
-            // Brought back to life — a failed payment that went through on the
-            // second attempt outside the checkout, a payment that arrived for
-            // a cancelled order, or an admin reopening it. An order that is
-            // live again has to be paid again.
-            if ((in_array($from, self::RELEASE_STATUSES, true) || $from === 'trash') && $state === self::STATE_RELEASED) {
-                $this->redebit($order);
+            // Placed and paid, or about to be — a failed payment that went
+            // through on the second attempt outside the checkout, a payment
+            // that arrived for a cancelled order, an admin reopening it. The
+            // balance has to be on the order again.
+            //
+            // Not on the way to "pending": that is a checkout starting over,
+            // and the checkout takes the balance itself. Taking it here as
+            // well, falling short and parking the order on hold would let the
+            // checkout finish an order nobody was asked to pay for.
+            if (in_array($to, self::HELD_STATUSES, true)) {
+                $this->settle($order);
             }
         });
+    }
+
+    /**
+     * Whether the order counts on a balance that no card has been debited
+     * for: returned when the order failed or was cancelled, or staged by a
+     * checkout that never got as far as taking it.
+     */
+    protected static function unsettled(WC_Order $order): float
+    {
+        if ($order->get_meta(self::META_STATE) === self::STATE_DEBITED) {
+            return 0.0;
+        }
+
+        $pending = $order->get_meta(self::META_PENDING);
+
+        if (is_array($pending) && $pending) {
+            return Money::exact(array_sum(array_column($pending, 'amount')));
+        }
+
+        if ($order->get_meta(self::META_STATE) !== self::STATE_RELEASED) {
+            return 0.0;
+        }
+
+        return Money::exact(array_sum(array_column(self::lines($order), 'restored')));
+    }
+
+    /**
+     * Take the balance the order counts on, now. Call under the order's lock.
+     * What cannot be taken is added back to the order's total and the order
+     * is put on hold.
+     */
+    protected function settle(WC_Order $order, bool $hold = true): void
+    {
+        if (self::unsettled($order) <= 0) {
+            return;
+        }
+
+        $pending = $order->get_meta(self::META_PENDING);
+
+        // Staged but never taken: the same as returned in full.
+        if (is_array($pending) && $pending) {
+            $order->update_meta_data(self::META_LINES, array_map(static fn (array $line) => [
+                'card_id' => (int) ($line['card_id'] ?? 0),
+                'type' => (string) ($line['type'] ?? Card::TYPE_GIFT_CARD),
+                'masked' => (string) ($line['masked'] ?? ''),
+                'amount' => Money::exact($line['amount'] ?? 0),
+                'restored' => Money::exact($line['amount'] ?? 0),
+            ], array_filter($pending, 'is_array')));
+            $order->update_meta_data(self::META_STATE, self::STATE_RELEASED);
+            $order->delete_meta_data(self::META_PENDING);
+
+            Logger::warning('An order reached a paid status with a balance that was staged but never taken', ['order_id' => $order->get_id()]);
+        }
+
+        $this->redebit($order, $hold);
+    }
+
+    /**
+     * WooCommerce is about to record a payment. Its own copy of the order is
+     * the one that gets the new status, so a shortfall is only written down
+     * here; paymentCompleteStatus() turns it into "on hold".
+     *
+     * @param  int|mixed  $orderId
+     */
+    public function beforePaymentComplete($orderId): void
+    {
+        $order = wc_get_order($orderId);
+
+        if (! $order instanceof WC_Order) {
+            return;
+        }
+
+        Lock::order($order->get_id(), function () use ($order): void {
+            $order->read_meta_data(true);
+            $this->settle($order, false);
+        });
+    }
+
+    /**
+     * An order that is short stays on hold, however many times the gateway
+     * says it has been paid: what it was paid is less than it is worth.
+     *
+     * @param  mixed  $status
+     * @param  int|mixed  $orderId
+     * @param  mixed  $order
+     * @return mixed
+     */
+    public function paymentCompleteStatus($status, $orderId = 0, $order = null)
+    {
+        // Read again: the order WooCommerce is holding was loaded before the
+        // shortfall was written.
+        $fresh = wc_get_order($order instanceof WC_Order ? $order->get_id() : $orderId);
+
+        return $fresh instanceof WC_Order && $fresh->get_meta(self::META_SHORT) !== '' ? 'on-hold' : $status;
+    }
+
+    /**
+     * An order that is short cannot be moved on by a payment, so reaching
+     * "processing" or "completed" means a person moved it: the shortfall is
+     * theirs to have settled. Early, so that everything else waiting for the
+     * order to be paid — its gift cards — sees it as paid.
+     *
+     * @param  int|mixed  $orderId
+     * @param  mixed  $order
+     */
+    public function shortfallSettled($orderId, $order = null): void
+    {
+        $order = $order instanceof WC_Order ? $order : wc_get_order($orderId);
+
+        if (! $order instanceof WC_Order) {
+            return;
+        }
+
+        $order->read_meta_data(true);
+
+        if ($order->get_meta(self::META_SHORT) !== '') {
+            $order->delete_meta_data(self::META_SHORT);
+            $order->save();
+        }
+    }
+
+    /**
+     * The "pay for order" page of an order whose balance is not on it — a
+     * failed payment, a checkout that broke off. The customer is about to pay
+     * through a gateway what the page shows, so the page has to show the full
+     * price: the balance went back to their card, or never left it.
+     */
+    public function beforePayPage(): void
+    {
+        $order = wc_get_order(absint(get_query_var('order-pay')));
+
+        if ($order instanceof WC_Order) {
+            $this->withoutBalance($order);
+        }
+    }
+
+    /**
+     * The same on submit, for a page that was open before the balance went
+     * back. The gateway's form was drawn with the old amount, so the customer
+     * is sent round to look again.
+     *
+     * @param  mixed  $order
+     */
+    public function beforePayAction($order): void
+    {
+        if (! $order instanceof WC_Order || ! $this->withoutBalance($order)) {
+            return;
+        }
+
+        wc_add_notice(__('The gift card or store credit on this order is no longer applied, so its total has changed. Please review it and pay again.', 'wp-woocommerce-store-balance'), 'error');
+
+        if (wp_safe_redirect($order->get_checkout_payment_url())) {
+            exit;
+        }
+    }
+
+    /**
+     * Make an order that counts on an untaken balance worth its full price.
+     * True when that changed the order.
+     */
+    protected function withoutBalance(WC_Order $order): bool
+    {
+        if (! $order->has_status(['pending', 'failed']) || self::unsettled($order) <= 0) {
+            return false;
+        }
+
+        $changed = false;
+
+        Lock::order($order->get_id(), function () use ($order, &$changed): void {
+            $order->read_meta_data(true);
+            $amount = self::unsettled($order);
+
+            if ($amount <= 0) {
+                return;
+            }
+
+            // Whatever part of a line is still held stays; only the part that
+            // is not on the order any more goes.
+            $lines = [];
+
+            foreach ($order->get_meta(self::META_STATE) === self::STATE_RELEASED ? self::lines($order) : [] as $line) {
+                $line['amount'] = Money::exact($line['amount'] - $line['restored']);
+                $line['restored'] = 0.0;
+
+                if ($line['amount'] > 0) {
+                    $lines[] = $line;
+                }
+            }
+
+            $order->delete_meta_data(self::META_PENDING);
+
+            if ($lines) {
+                $order->update_meta_data(self::META_LINES, $lines);
+                $order->update_meta_data(self::META_STATE, self::STATE_DEBITED);
+            } else {
+                $order->delete_meta_data(self::META_LINES);
+                $order->delete_meta_data(self::META_STATE);
+            }
+
+            $order->set_total(wc_format_decimal(Money::exact((float) $order->get_total() + $amount)));
+            $order->save();
+
+            $order->add_order_note(sprintf(
+                /* translators: %s: amount */
+                __('The %s of gift card / store credit this order was placed with is not on it any more, so it has been added back to the total to pay.', 'wp-woocommerce-store-balance'),
+                Money::plain($amount, $order->get_currency())
+            ));
+
+            $changed = true;
+        });
+
+        return $changed;
+    }
+
+    /**
+     * WooCommerce marks an order "refunded" once the refunds add up to its
+     * total. Here the total is only what the gateway was paid: refund that —
+     * one returned item on an order mostly paid by gift card — and the order
+     * would count as refunded in full, and all of the balance would go back
+     * with the goods still out. So an order that holds a balance keeps its
+     * status; setting it to Refunded by hand is what returns the balance.
+     *
+     * @param  mixed  $status
+     * @param  int|mixed  $orderId
+     * @return mixed
+     */
+    public function fullyRefundedStatus($status, $orderId = 0)
+    {
+        $order = wc_get_order($orderId);
+
+        if (! $order instanceof WC_Order || self::held($order) <= 0) {
+            return $status;
+        }
+
+        $order->add_order_note(sprintf(
+            /* translators: %s: amount */
+            __('The amount paid through the payment method has been refunded. %s was paid with gift card / store credit and is still on this order: set the order to Refunded to return all of it to the cards, or change a card\'s balance by hand to return part of it.', 'wp-woocommerce-store-balance'),
+            Money::plain(self::held($order), $order->get_currency())
+        ));
+
+        return false;
     }
 
     /**
@@ -352,7 +630,8 @@ class Orders implements Module
     {
         $order = $this->orderFor($orderId);
 
-        if (! $order || ! self::lines($order)) {
+        // A paid order being tidied away keeps what it was paid with.
+        if (! $order || ! self::lines($order) || self::wasPaid($order)) {
             return;
         }
 
@@ -366,6 +645,21 @@ class Orders implements Module
     }
 
     /**
+     * Whether the order is paid, or was when it went into the trash.
+     */
+    protected static function wasPaid(WC_Order $order): bool
+    {
+        $status = $order->get_status();
+
+        if ($status === 'trash') {
+            $before = $order->get_meta('_wp_trash_meta_status') ?: get_post_meta($order->get_id(), '_wp_trash_meta_status', true);
+            $status = preg_replace('/^wc-/', '', (string) $before);
+        }
+
+        return in_array($status, wc_get_is_paid_statuses(), true);
+    }
+
+    /**
      * Back from the trash, in whatever status it had before.
      *
      * @param  int|mixed  $orderId
@@ -374,7 +668,7 @@ class Orders implements Module
     {
         $order = $this->orderFor($orderId);
 
-        if (! $order || ! self::lines($order) || $order->has_status(array_merge(self::RELEASE_STATUSES, ['trash']))) {
+        if (! $order || ! self::lines($order) || ! $order->has_status(self::HELD_STATUSES)) {
             return;
         }
 
@@ -420,14 +714,14 @@ class Orders implements Module
         $returned = [];
 
         foreach ($lines as &$line) {
-            $held = Money::round($line['amount'] - $line['restored']);
+            $held = Money::exact($line['amount'] - $line['restored']);
 
             if ($held <= 0) {
                 continue;
             }
 
             if ($cards->credit((int) $line['card_id'], $held, $type, ['order_id' => $order->get_id(), 'note' => $note])) {
-                $line['restored'] = Money::round($line['restored'] + $held);
+                $line['restored'] = Money::exact($line['restored'] + $held);
                 $total += $held;
                 $returned[] = self::label([$line]).' '.$line['masked'];
             } else {
@@ -458,14 +752,14 @@ class Orders implements Module
      * Take back what release() returned. If a card has been spent elsewhere in
      * the meantime the order is short, and that is for a person to resolve.
      */
-    protected function redebit(WC_Order $order): void
+    protected function redebit(WC_Order $order, bool $hold = true): void
     {
         $cards = Plugin::getInstance()->cards();
         $lines = self::lines($order);
         $short = 0.0;
 
         foreach ($lines as &$line) {
-            $amount = Money::round($line['restored']);
+            $amount = Money::exact($line['restored']);
 
             if ($amount <= 0) {
                 continue;
@@ -478,7 +772,7 @@ class Orders implements Module
                 // the line, so the order's total goes up by it: the amount
                 // due is on the order itself, not only in a note.
                 $short += $amount;
-                $line['amount'] = Money::round($line['amount'] - $amount);
+                $line['amount'] = Money::exact($line['amount'] - $amount);
                 $line['restored'] = 0.0;
             }
         }
@@ -490,7 +784,8 @@ class Orders implements Module
         $order->update_meta_data(self::META_STATE, self::STATE_DEBITED);
 
         if ($short > 0) {
-            $order->set_total(wc_format_decimal(Money::round((float) $order->get_total() + $short)));
+            $order->set_total(wc_format_decimal(Money::exact((float) $order->get_total() + $short)));
+            $order->update_meta_data(self::META_SHORT, (string) Money::exact((float) $order->get_meta(self::META_SHORT) + $short));
         }
 
         $order->save();
@@ -498,13 +793,19 @@ class Orders implements Module
         if ($short > 0) {
             Logger::error('Order reopened but the balance is no longer there', ['order_id' => $order->get_id(), 'short' => $short]);
 
-            // On hold, so that it is not packed and shipped on money that is
-            // not there. A person decides what happens next.
-            $order->update_status('on-hold', sprintf(
+            $note = sprintf(
                 /* translators: %s: amount */
                 __('This order was reopened, but %s of the gift card / store credit it was paid with has been spent elsewhere. That amount has been added back to the order total and is unpaid: collect it or cancel the order.', 'wp-woocommerce-store-balance'),
                 Money::plain($short, $order->get_currency())
-            ));
+            );
+
+            // On hold, so that it is not packed and shipped on money that is
+            // not there. A person decides what happens next.
+            if ($hold) {
+                $order->update_status('on-hold', $note);
+            } else {
+                $order->add_order_note($note);
+            }
         }
     }
 
@@ -597,7 +898,24 @@ class Orders implements Module
      */
     public static function applied(WC_Order $order): float
     {
-        return Money::round(array_sum(array_column(self::lines($order), 'amount')));
+        return Money::exact(array_sum(array_column(self::lines($order), 'amount')));
+    }
+
+    /**
+     * By how much the order's total has been lowered: what was taken from the
+     * cards, or what the checkout has staged and is about to take. For code
+     * that rebuilds the total from the order's lines, such as a gateway
+     * sending an itemised amount.
+     */
+    public static function deducted(WC_Order $order): float
+    {
+        $pending = $order->get_meta(self::META_PENDING);
+
+        if (is_array($pending) && $pending && $order->get_meta(self::META_STATE) !== self::STATE_DEBITED) {
+            return Money::exact(array_sum(array_column($pending, 'amount')));
+        }
+
+        return self::applied($order);
     }
 
     /**
@@ -614,10 +932,10 @@ class Orders implements Module
         $held = [];
 
         foreach (self::lines($order) as $line) {
-            $amount = Money::round($line['amount'] - $line['restored']);
+            $amount = Money::exact($line['amount'] - $line['restored']);
 
             if ($amount > 0) {
-                $held[$line['card_id']] = Money::round(($held[$line['card_id']] ?? 0) + $amount);
+                $held[$line['card_id']] = Money::exact(($held[$line['card_id']] ?? 0) + $amount);
             }
         }
 
@@ -626,7 +944,7 @@ class Orders implements Module
 
     public static function held(WC_Order $order): float
     {
-        return Money::round(array_sum(self::heldLines($order)));
+        return Money::exact(array_sum(self::heldLines($order)));
     }
 
     /**

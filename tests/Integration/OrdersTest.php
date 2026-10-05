@@ -7,6 +7,7 @@ use Exception;
 use GeneroWP\StoreBalance\CardRepository;
 use GeneroWP\StoreBalance\Install;
 use GeneroWP\StoreBalance\Modules\Orders;
+use GeneroWP\StoreBalance\Plugin;
 
 class OrdersTest extends TestCase
 {
@@ -656,16 +657,50 @@ class OrdersTest extends TestCase
         );
     }
 
-    public function test_deleting_an_order_for_good_gives_the_balance_back(): void
+    public function test_deleting_an_unpaid_order_for_good_gives_the_balance_back(): void
     {
         [$order, $card] = $this->orderPaidPartlyWithStoreCredit(50);
-        $order->update_status('processing');
+        $order->update_status('on-hold');
         $orderId = $order->get_id();
 
         $order->delete(true);
 
         $this->assertSame(50.0, $this->balance($card));
         $this->assertFalse(wc_get_order($orderId));
+    }
+
+    /**
+     * Tidying away an order that was paid and delivered is not undoing it:
+     * the balance paid for goods the customer has.
+     */
+    public function test_trashing_or_deleting_a_paid_order_keeps_the_balance_spent(): void
+    {
+        foreach ([false, true] as $forGood) {
+            [$order, $card] = $this->orderPaidPartlyWithStoreCredit(50);
+            $order->payment_complete();
+            wc_get_order($order->get_id())->update_status('completed');
+
+            wc_get_order($order->get_id())->delete($forGood);
+
+            $this->assertSame(0.0, $this->balance($card), $forGood ? 'deleted' : 'trashed');
+            $this->assertCount(2, $this->ledger($card));
+        }
+    }
+
+    public function test_a_paid_order_trashed_and_then_deleted_keeps_the_balance_spent(): void
+    {
+        [$order, $card] = $this->orderPaidPartlyWithStoreCredit(50);
+        $order->payment_complete();
+        $orderId = $order->get_id();
+
+        wc_get_order($orderId)->delete(false);
+        $trashed = wc_get_order($orderId);
+
+        if ($trashed) {
+            $trashed->delete(true);
+        }
+
+        $this->assertSame(0.0, $this->balance($card));
     }
 
     /**
@@ -880,7 +915,8 @@ class OrdersTest extends TestCase
         }
 
         $this->assertSame(80.0, $this->balance($card));
-        $this->assertCount(7, $this->ledger($card));
+        // The trash is not in it: the order was paid when it went there.
+        $this->assertCount(5, $this->ledger($card));
     }
 
     /**
@@ -1140,7 +1176,7 @@ class OrdersTest extends TestCase
     public function test_trashing_and_restoring_twice_moves_the_balance_once_each_time(): void
     {
         [$order, $card] = $this->orderPaidPartlyWithStoreCredit(50);
-        $order->update_status('processing');
+        $order->update_status('on-hold');
         $orderId = $order->get_id();
 
         $expected = [CardRepository::TX_ISSUE, CardRepository::TX_DEBIT];
@@ -1157,7 +1193,7 @@ class OrdersTest extends TestCase
 
             $this->assertSame(0.0, $this->balance($card), "Restore {$round}");
             $this->assertSame($expected, $this->ledgerTypes($card), "Restore {$round}");
-            $this->assertSame('processing', wc_get_order($orderId)->get_status());
+            $this->assertSame('on-hold', wc_get_order($orderId)->get_status());
         }
     }
 
@@ -1168,7 +1204,7 @@ class OrdersTest extends TestCase
     public function test_an_order_restored_from_the_trash_without_its_balance_is_put_on_hold(): void
     {
         [$order, $card] = $this->orderPaidPartlyWithStoreCredit(50);
-        $order->update_status('processing');
+        $order->update_status('on-hold');
         $orderId = $order->get_id();
 
         wc_get_order($orderId)->delete(false);
@@ -1206,5 +1242,202 @@ class OrdersTest extends TestCase
         $this->assertStringContainsString('15', wp_strip_all_tags($rows['store_balance_store_credit']['value']));
         $this->assertSame([], Orders::byType([]));
         $this->assertSame(['store_credit' => 5.0], Orders::byType([['type' => 'store_credit', 'amount' => 5], ['type' => 'voucher', 'amount' => 9]]));
+    }
+
+    /**
+     * The order total is only what the gateway was paid. Refunding that used
+     * to make WooCommerce call the order refunded in full, and all of the
+     * balance went back while the customer kept the rest of the goods.
+     */
+    public function test_refunding_what_the_gateway_was_paid_does_not_return_the_balance(): void
+    {
+        [$order, $card] = $this->orderPaidPartlyWithStoreCredit(50);
+        $order->payment_complete();
+        $order = wc_get_order($order->get_id());
+
+        $refund = wc_create_refund(['order_id' => $order->get_id(), 'amount' => $order->get_total(), 'reason' => 'One item returned']);
+
+        $this->assertNotWPError($refund);
+        $order = wc_get_order($order->get_id());
+        $this->assertSame('processing', $order->get_status());
+        $this->assertSame(0.0, $this->balance($card));
+        $this->assertSame(50.0, Orders::held($order));
+        $this->assertStringContainsString('set the order to Refunded', implode(' ', array_map(static fn ($note) => $note->content, wc_get_order_notes(['order_id' => $order->get_id()]))));
+
+        // Asked for in so many words, it does go back.
+        $order->update_status('refunded');
+        $this->assertSame(50.0, $this->balance($card));
+    }
+
+    public function test_a_zero_refund_on_an_order_paid_in_full_by_a_balance_returns_nothing(): void
+    {
+        [$order, $card] = $this->orderPaidPartlyWithStoreCredit(200, 100);
+        $order = wc_get_order($order->get_id());
+        $this->assertSame(0.0, (float) $order->get_total());
+
+        wc_create_refund(['order_id' => $order->get_id(), 'amount' => 0, 'reason' => 'Restock']);
+
+        $this->assertNotSame('refunded', wc_get_order($order->get_id())->get_status());
+        $this->assertSame(100.0, Orders::held(wc_get_order($order->get_id())));
+    }
+
+    public function test_an_order_without_a_balance_is_still_marked_refunded_by_a_full_refund(): void
+    {
+        WC()->cart->add_to_cart($this->product(100)->get_id());
+        $order = $this->placeOrder();
+        $order->payment_complete();
+
+        wc_create_refund(['order_id' => $order->get_id(), 'amount' => wc_get_order($order->get_id())->get_total()]);
+
+        $this->assertSame('refunded', wc_get_order($order->get_id())->get_status());
+    }
+
+    /**
+     * A failed order going back to "pending" is a checkout starting over. It
+     * must not take the balance, fall short and end up on hold: the checkout
+     * would then finish an order nobody was asked to pay for.
+     */
+    public function test_a_failed_order_going_back_to_pending_is_left_for_the_checkout(): void
+    {
+        [$order, $card] = $this->orderPaidPartlyWithStoreCredit(50);
+        $order->update_status('failed');
+        $this->cards->debit($card->id, 50, ['note' => 'Spent elsewhere']);
+
+        $order = wc_get_order($order->get_id());
+        $order->update_status('pending');
+
+        $order = wc_get_order($order->get_id());
+        $this->assertSame('pending', $order->get_status());
+        $this->assertTrue($order->needs_payment());
+        $this->assertSame(139.0, (float) $order->get_total());
+        $this->assertSame('', $order->get_meta(Orders::META_SHORT));
+    }
+
+    public function test_a_payment_for_an_order_whose_balance_is_gone_never_reaches_processing(): void
+    {
+        [$order, $card] = $this->orderPaidPartlyWithStoreCredit(50);
+        $order->update_status('failed');
+        $this->cards->debit($card->id, 50, ['note' => 'Spent elsewhere']);
+
+        $reached = [];
+        $spy = static function ($id) use (&$reached): void {
+            $reached[] = $id;
+        };
+        add_action('woocommerce_order_status_processing', $spy);
+
+        wc_get_order($order->get_id())->payment_complete('txn_1');
+
+        remove_action('woocommerce_order_status_processing', $spy);
+
+        $order = wc_get_order($order->get_id());
+        $this->assertSame([], $reached);
+        $this->assertSame('on-hold', $order->get_status());
+        $this->assertSame(189.0, (float) $order->get_total());
+        $this->assertSame(50.0, (float) $order->get_meta(Orders::META_SHORT));
+
+        // The gateway saying so again changes nothing.
+        $order->payment_complete('txn_1');
+        $this->assertSame('on-hold', wc_get_order($order->get_id())->get_status());
+
+        // A person does.
+        wc_get_order($order->get_id())->update_status('processing');
+        $order = wc_get_order($order->get_id());
+        $this->assertSame('processing', $order->get_status());
+        $this->assertSame('', $order->get_meta(Orders::META_SHORT));
+    }
+
+    /**
+     * The checkout saved the order at the reduced total and broke off before
+     * taking the balance. Whoever pays it must not get the balance for free.
+     */
+    public function test_a_balance_that_was_staged_but_never_taken_is_taken_when_the_order_is_paid(): void
+    {
+        $customerId = $this->customer();
+        $card = $this->storeCredit($customerId, 50);
+        $this->actAs($customerId);
+        WC()->cart->add_to_cart($this->product()->get_id());
+
+        $order = $this->createOrderFromCart();
+        $this->assertSame(139.0, (float) $order->get_total());
+        $this->assertSame(50.0, $this->balance($card));
+
+        wc_get_order($order->get_id())->payment_complete();
+
+        $order = wc_get_order($order->get_id());
+        $this->assertSame('processing', $order->get_status());
+        $this->assertSame(0.0, $this->balance($card));
+        $this->assertSame(50.0, Orders::held($order));
+        $this->assertEmpty($order->get_meta(Orders::META_PENDING));
+    }
+
+    public function test_the_pay_page_of_an_order_whose_balance_was_never_taken_asks_the_full_price(): void
+    {
+        $customerId = $this->customer();
+        $card = $this->storeCredit($customerId, 50);
+        $this->actAs($customerId);
+        WC()->cart->add_to_cart($this->product()->get_id());
+        $order = $this->createOrderFromCart();
+
+        set_query_var('order-pay', $order->get_id());
+        Plugin::getInstance()->module(Orders::class)->beforePayPage();
+        set_query_var('order-pay', '');
+
+        $order = wc_get_order($order->get_id());
+        $this->assertSame(189.0, (float) $order->get_total());
+        $this->assertEmpty($order->get_meta(Orders::META_PENDING));
+        $this->assertSame(50.0, $this->balance($card));
+
+        // Paid in full through the gateway: the balance is not touched.
+        $order->payment_complete();
+        $this->assertSame(50.0, $this->balance($card));
+        $this->assertSame('processing', wc_get_order($order->get_id())->get_status());
+    }
+
+    public function test_the_pay_page_of_a_failed_order_asks_the_full_price_and_leaves_the_card_alone(): void
+    {
+        [$order, $card] = $this->orderPaidPartlyWithStoreCredit(50);
+        $order->update_status('failed');
+        $this->assertSame(50.0, $this->balance($card));
+
+        set_query_var('order-pay', $order->get_id());
+        Plugin::getInstance()->module(Orders::class)->beforePayPage();
+        set_query_var('order-pay', '');
+
+        $order = wc_get_order($order->get_id());
+        $this->assertSame(189.0, (float) $order->get_total());
+        $this->assertSame([], Orders::lines($order));
+
+        $order->payment_complete();
+        $this->assertSame(50.0, $this->balance($card));
+        $this->assertSame('processing', wc_get_order($order->get_id())->get_status());
+    }
+
+    public function test_the_pay_page_of_an_order_that_holds_its_balance_changes_nothing(): void
+    {
+        [$order, $card] = $this->orderPaidPartlyWithStoreCredit(50);
+
+        set_query_var('order-pay', $order->get_id());
+        Plugin::getInstance()->module(Orders::class)->beforePayPage();
+        set_query_var('order-pay', '');
+
+        $order = wc_get_order($order->get_id());
+        $this->assertSame(139.0, (float) $order->get_total());
+        $this->assertSame(50.0, Orders::held($order));
+        $this->assertSame(0.0, $this->balance($card));
+    }
+
+    /**
+     * A currency switcher changes the price decimals with the currency of the
+     * request. What goes back to a card is what was taken from it.
+     */
+    public function test_a_balance_returned_from_a_request_without_decimals_is_returned_to_the_cent(): void
+    {
+        [$order, $card] = $this->orderPaidPartlyWithStoreCredit(10.55);
+
+        add_filter('wc_get_price_decimals', '__return_zero');
+        wc_get_order($order->get_id())->update_status('cancelled');
+        remove_filter('wc_get_price_decimals', '__return_zero');
+
+        $this->assertSame(10.55, $this->balance($card));
     }
 }

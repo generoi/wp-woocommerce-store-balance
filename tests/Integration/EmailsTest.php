@@ -327,4 +327,22 @@ class EmailsTest extends TestCase
         $this->assertStringNotContainsString($credit->formattedCode(), $mail->body);
         $this->assertSame(Card::TYPE_STORE_CREDIT, $credit->type);
     }
+
+    /**
+     * A code in the query string is written to access logs and sent to
+     * analytics. After the "#" it never leaves the browser.
+     */
+    public function test_the_link_in_the_gift_card_email_keeps_the_code_out_of_the_query_string(): void
+    {
+        $card = $this->giftCard(50, ['recipient_email' => 'friend@example.org']);
+        Plugin::getInstance()->module(Emails::class)->send($card);
+
+        $mail = $this->emailsTo('friend@example.org')[0];
+        $body = (string) $mail->body;
+
+        $this->assertStringContainsString('#code='.$card->formattedCode(), $body);
+        $this->assertStringNotContainsString('?code=', $body);
+        $this->assertStringNotContainsString('&code=', $body);
+        $this->assertStringNotContainsString('&amp;code=', $body);
+    }
 }

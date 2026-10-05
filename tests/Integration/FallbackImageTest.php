@@ -17,6 +17,7 @@ class FallbackImageTest extends TestCase
         }
 
         delete_option(FallbackImage::OPTION);
+        delete_transient(FallbackImage::OPTION.'_attempt');
 
         parent::tearDown();
     }

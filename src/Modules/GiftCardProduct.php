@@ -69,6 +69,7 @@ class GiftCardProduct implements Module
         add_filter('woocommerce_coupon_is_valid_for_product', [$this, 'couponValidForProduct'], 20, 2);
         add_filter('woocommerce_coupon_get_items_to_apply', [$this, 'couponItems'], 20);
         add_filter('woocommerce_order_item_needs_processing', [$this, 'needsProcessing'], 20, 2);
+        add_filter('woocommerce_available_payment_gateways', [$this, 'paymentGateways'], 20);
 
         // Product page and cart.
         add_action('woocommerce_before_add_to_cart_button', [$this, 'form']);
@@ -491,6 +492,68 @@ class GiftCardProduct implements Module
     }
 
     /**
+     * A gift card is sent the moment its order counts as paid. Cash on
+     * delivery counts an order as paid — "processing" — before any money has
+     * changed hands, which would hand out spendable codes for nothing. So a
+     * cart with a gift card in it cannot be paid on delivery.
+     *
+     * @param  mixed  $gateways
+     * @return mixed
+     */
+    public function paymentGateways($gateways)
+    {
+        if (! is_array($gateways) || ! $gateways) {
+            return $gateways;
+        }
+
+        /**
+         * Payment methods that mark an order as paid before the money has
+         * arrived, and so cannot be used to buy a gift card.
+         *
+         * @param  string[]  $ids  Gateway ids.
+         */
+        $payLater = array_intersect_key($gateways, array_flip((array) apply_filters('wc_store_balance_pay_later_gateways', ['cod'])));
+
+        if (! $payLater || ! $this->buyingGiftCard()) {
+            return $gateways;
+        }
+
+        return array_diff_key($gateways, $payLater);
+    }
+
+    /**
+     * Whether what is being paid for — the cart, or the order on the "pay for
+     * order" page — has a gift card in it.
+     */
+    protected function buyingGiftCard(): bool
+    {
+        $orderId = function_exists('is_wc_endpoint_url') && is_wc_endpoint_url('order-pay') ? absint(get_query_var('order-pay')) : 0;
+        $order = $orderId ? wc_get_order($orderId) : null;
+
+        if ($order instanceof \WC_Order) {
+            foreach ($order->get_items() as $item) {
+                if ($item->get_meta(Issuance::ITEM_DATA)) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        if (! function_exists('WC') || ! WC()->cart) {
+            return false;
+        }
+
+        foreach (WC()->cart->get_cart() as $item) {
+            if (! empty($item[self::CART_KEY])) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Nothing to pack or ship, so an order of only gift cards completes on
      * payment instead of waiting in "processing".
      */
@@ -705,21 +768,73 @@ class GiftCardProduct implements Module
     }
 
     /**
-     * @param  array<string, mixed>  $data
+     * @param  mixed  $data
      * @param  int  $productId
-     * @return array<string, mixed>
+     * @return mixed
      */
     public function cartItemData($data, $productId)
     {
-        if ($this->validated === null || ! self::isGiftCard(wc_get_product($productId))) {
+        $product = wc_get_product($productId);
+
+        if (! self::isGiftCard($product)) {
             return $data;
         }
 
-        $data[self::CART_KEY] = $this->validated;
-        $this->validated = null;
-        $this->added = true;
+        $data = is_array($data) ? $data : [];
+
+        if ($this->validated !== null) {
+            $data[self::CART_KEY] = $this->validated;
+            $this->validated = null;
+            $this->added = true;
+        } elseif (empty($data[self::CART_KEY]) || ! self::amountAllowed($product, $data[self::CART_KEY]['amount'] ?? null)) {
+            // Not through the product form and not through the Store API:
+            // an express payment button, an abandoned-cart link, another
+            // plugin calling add_to_cart() with a product id. Those skip
+            // the validation filter, and the line would be sold at the
+            // product's "from" price with no gift card behind it. Take the
+            // form fields if the caller passed them on; refuse otherwise.
+            // WC_Cart::add_to_cart() turns the exception into a notice.
+            // phpcs:ignore WordPress.Security.NonceVerification -- adding to the cart is not a privileged action.
+            $result = $this->parse($product, wp_unslash($_POST));
+
+            if ($result['errors']) {
+                throw new \Exception(esc_html(isset($_POST['store_balance_amount']) // phpcs:ignore WordPress.Security.NonceVerification
+                    ? implode(' ', $result['errors'])
+                    : __('Choose an amount for the gift card on its product page.', 'wp-woocommerce-store-balance')));
+            }
+
+            $data[self::CART_KEY] = $result['data'];
+        }
+
+        // The amount is a number in the currency it was chosen in.
+        $data[self::CART_KEY]['currency'] ??= get_woocommerce_currency();
 
         return $data;
+    }
+
+    /**
+     * Whether an amount is one the product sells: for a line that arrives
+     * with its details already on it, such as a restored cart.
+     *
+     * @param  mixed  $amount
+     */
+    protected static function amountAllowed(WC_Product $product, $amount): bool
+    {
+        if (! is_numeric($amount) || (float) $amount <= 0) {
+            return false;
+        }
+
+        $amount = (float) $amount;
+
+        foreach (self::amounts($product) as $preset) {
+            if (abs($preset - $amount) < 0.00005) {
+                return true;
+            }
+        }
+
+        $custom = self::customAmount($product);
+
+        return $custom['enabled'] && $amount >= $custom['min'] && $amount <= $custom['max'];
     }
 
     /** The fields of the gift card form, as the Store API accepts them in an add-item request. */
@@ -822,8 +937,37 @@ class GiftCardProduct implements Module
             return;
         }
 
-        foreach ($cart->get_cart() as $item) {
-            if (! empty($item[self::CART_KEY]['amount']) && $item['data'] instanceof WC_Product) {
+        foreach ($cart->get_cart() as $key => $item) {
+            if (! ($item['data'] ?? null) instanceof WC_Product) {
+                continue;
+            }
+
+            $currency = (string) ($item[self::CART_KEY]['currency'] ?? '');
+
+            // A gift card line with no amount behind it (added by something
+            // that bypassed every check), or one chosen in another currency:
+            // "50" picked on a page in euros is not 50 kronor. Neither can be
+            // sold as it stands.
+            if ((empty($item[self::CART_KEY]['amount']) && self::isGiftCard($item['data']))
+                || (! empty($item[self::CART_KEY]['amount']) && $currency !== '' && $currency !== get_woocommerce_currency())
+            ) {
+                $cart->remove_cart_item($key);
+
+                $message = $currency !== ''
+                    /* translators: %s: product name */
+                    ? __('"%s" was removed from your cart because its amount was chosen in another currency. Please add it again.', 'wp-woocommerce-store-balance')
+                    /* translators: %s: product name */
+                    : __('"%s" was removed from your cart because no amount was chosen. Please add it again from its product page.', 'wp-woocommerce-store-balance');
+                $message = sprintf($message, $item['data']->get_name());
+
+                if (function_exists('wc_has_notice') && ! wc_has_notice($message, 'notice')) {
+                    wc_add_notice($message, 'notice');
+                }
+
+                continue;
+            }
+
+            if (! empty($item[self::CART_KEY]['amount'])) {
                 $amount = wc_format_decimal($item[self::CART_KEY]['amount']);
 
                 // All three, or an amount below the product's "from" price

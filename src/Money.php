@@ -18,6 +18,18 @@ class Money
     }
 
     /**
+     * Round for the ledger: four decimals, as the tables store them.
+     *
+     * Not the shop's price decimals. A currency switcher changes those with
+     * the currency of the request, and a balance of 10.55 returned to its card
+     * from a request in a currency without decimals must not come back as 11.
+     */
+    public static function exact(float|int|string $amount): float
+    {
+        return round((float) $amount, 4);
+    }
+
+    /**
      * The SQL literal for an amount. Passed as a string so MySQL does DECIMAL
      * arithmetic rather than float arithmetic.
      */

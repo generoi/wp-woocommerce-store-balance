@@ -38,7 +38,7 @@ class CardRepository
     {
         global $wpdb;
 
-        $amount = Money::round($data['amount'] ?? 0);
+        $amount = Money::exact($data['amount'] ?? 0);
         $type = (string) ($data['type'] ?? Card::TYPE_GIFT_CARD);
         $currency = strtoupper((string) ($data['currency'] ?? ''));
 
@@ -290,7 +290,7 @@ class CardRepository
     {
         global $wpdb;
 
-        $amount = Money::round($amount);
+        $amount = Money::exact($amount);
 
         if ($amount <= 0) {
             return false;
@@ -338,7 +338,7 @@ class CardRepository
     {
         global $wpdb;
 
-        $amount = Money::round($amount);
+        $amount = Money::exact($amount);
 
         if ($amount <= 0) {
             return false;
@@ -382,7 +382,7 @@ class CardRepository
     {
         global $wpdb;
 
-        $balance = Money::round($balance);
+        $balance = Money::exact($balance);
 
         if ($balance < 0 || ! $this->find($id)) {
             return false;
@@ -405,7 +405,7 @@ class CardRepository
 
         $old = (float) $wpdb->get_var('SELECT @wc_sb_old');
 
-        $this->addTransaction($id, self::TX_ADJUST, Money::round($balance - $old), ['note' => $note, 'balance_after' => $balance]);
+        $this->addTransaction($id, self::TX_ADJUST, Money::exact($balance - $old), ['note' => $note, 'balance_after' => $balance]);
 
         return true;
     }

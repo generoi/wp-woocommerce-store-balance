@@ -739,4 +739,106 @@ class GiftCardProductTest extends TestCase
         $this->assertSame([], $parsed['rejected']);
         $this->assertSame([12.5, 25.0, 50.0], GiftCardProduct::parseAmounts('25; 12,50; 50')['amounts']);
     }
+
+    /**
+     * Cash on delivery calls an order "processing" before any money has
+     * arrived, and "processing" is when the gift card goes out.
+     */
+    public function test_a_gift_card_cannot_be_paid_for_on_delivery(): void
+    {
+        $gateways = ['cod' => new \WC_Gateway_COD, 'bacs' => new \WC_Gateway_BACS];
+
+        WC()->cart->add_to_cart($this->product()->get_id());
+        $this->assertSame(['cod', 'bacs'], array_keys(apply_filters('woocommerce_available_payment_gateways', $gateways)));
+
+        $this->addGiftCardToCart($this->giftCardProduct(), ['store_balance_amount' => '50']);
+        $this->assertSame(['bacs'], array_keys(apply_filters('woocommerce_available_payment_gateways', $gateways)));
+
+        add_filter('wc_store_balance_pay_later_gateways', '__return_empty_array');
+        $this->assertSame(['cod', 'bacs'], array_keys(apply_filters('woocommerce_available_payment_gateways', $gateways)));
+        remove_filter('wc_store_balance_pay_later_gateways', '__return_empty_array');
+    }
+
+    /**
+     * An express payment button, an abandoned-cart link, another plugin: code
+     * that calls add_to_cart() with a product id skips the validation filter.
+     * The line used to go in at the "from" price with no gift card behind it.
+     */
+    public function test_a_gift_card_added_by_code_that_skips_the_form_is_refused(): void
+    {
+        $product = $this->giftCardProduct();
+
+        $this->assertFalse(WC()->cart->add_to_cart($product->get_id()));
+        $this->assertSame([], WC()->cart->get_cart());
+        $this->assertStringContainsString('Choose an amount', implode(' ', array_column(wc_get_notices('error'), 'notice')));
+
+        wc_clear_notices();
+    }
+
+    public function test_code_that_passes_the_form_fields_on_gets_a_proper_gift_card_line(): void
+    {
+        $product = $this->giftCardProduct();
+
+        $_POST = ['store_balance_amount' => '50', 'store_balance_to' => 'friend@example.org'];
+        $key = WC()->cart->add_to_cart($product->get_id());
+        $_POST = [];
+
+        $this->assertIsString($key);
+        $line = WC()->cart->get_cart()[$key][GiftCardProduct::CART_KEY];
+        $this->assertSame(50.0, $line['amount']);
+        $this->assertSame('friend@example.org', $line['to']);
+        $this->assertSame(get_woocommerce_currency(), $line['currency']);
+
+        $_POST = ['store_balance_amount' => '7'];
+        $this->assertFalse(WC()->cart->add_to_cart($product->get_id()));
+        $_POST = [];
+
+        wc_clear_notices();
+    }
+
+    public function test_a_restored_cart_line_keeps_its_details_only_if_the_amount_is_one_the_product_sells(): void
+    {
+        $product = $this->giftCardProduct();
+
+        $key = WC()->cart->add_to_cart($product->get_id(), 1, 0, [], [GiftCardProduct::CART_KEY => ['amount' => 50.0, 'to' => 'friend@example.org']]);
+        $this->assertIsString($key);
+
+        $this->assertFalse(WC()->cart->add_to_cart($product->get_id(), 1, 0, [], [GiftCardProduct::CART_KEY => ['amount' => 0.01]]));
+        $this->assertFalse(WC()->cart->add_to_cart($product->get_id(), 1, 0, [], [GiftCardProduct::CART_KEY => ['amount' => 99999]]));
+
+        wc_clear_notices();
+    }
+
+    /**
+     * "50" chosen on a page in euros is not 50 kronor.
+     */
+    public function test_a_gift_card_chosen_in_another_currency_is_taken_out_of_the_cart(): void
+    {
+        $this->addGiftCardToCart($this->giftCardProduct(), ['store_balance_amount' => '50']);
+        WC()->cart->add_to_cart($this->product()->get_id());
+        $this->assertCount(2, WC()->cart->get_cart());
+
+        $sek = static fn () => 'SEK';
+        add_filter('woocommerce_currency', $sek);
+        WC()->cart->calculate_totals();
+        remove_filter('woocommerce_currency', $sek);
+
+        $this->assertCount(1, WC()->cart->get_cart());
+        $this->assertStringContainsString('another currency', implode(' ', array_column(wc_get_notices('notice'), 'notice')));
+
+        wc_clear_notices();
+    }
+
+    public function test_a_gift_card_line_without_an_amount_is_taken_out_of_the_cart(): void
+    {
+        $product = $this->giftCardProduct();
+        $key = WC()->cart->generate_cart_id($product->get_id());
+        WC()->cart->cart_contents[$key] = ['key' => $key, 'product_id' => $product->get_id(), 'variation_id' => 0, 'variation' => [], 'quantity' => 1, 'data' => $product, 'data_hash' => ''];
+
+        WC()->cart->calculate_totals();
+
+        $this->assertSame([], WC()->cart->get_cart());
+
+        wc_clear_notices();
+    }
 }

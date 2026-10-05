@@ -77,14 +77,23 @@ class FallbackImage implements Module
             return;
         }
 
-        if (wp_doing_ajax() || ! current_user_can('upload_files')) {
+        if (wp_doing_ajax() || ! current_user_can('manage_woocommerce')) {
             return;
         }
+
+        // One attempt at a time, and not again on every page load if the
+        // uploads folder refuses it.
+        if (get_transient(self::OPTION.'_attempt')) {
+            return;
+        }
+
+        set_transient(self::OPTION.'_attempt', 1, HOUR_IN_SECONDS);
 
         $id = self::create();
 
         if ($id) {
             update_option(self::OPTION, $id, false);
+            delete_transient(self::OPTION.'_attempt');
         }
     }
 

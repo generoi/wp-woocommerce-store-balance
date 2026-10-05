@@ -61,6 +61,14 @@ class Issuance implements Module
         // Without the lock each of them would find no cards yet, and each
         // would create them.
         Lock::order($order->get_id(), function () use ($order): void {
+            $order->read_meta_data(true);
+
+            // Paid for less than it is worth and waiting for a person: no
+            // gift cards go out on it yet.
+            if ($order->get_meta(Orders::META_SHORT) !== '') {
+                return;
+            }
+
             $this->issueLocked($order);
         });
     }
@@ -257,12 +265,23 @@ class Issuance implements Module
             return;
         }
 
+        $emails = Plugin::getInstance()->module(Emails::class);
+
         foreach ($disabled as $cardId) {
             Plugin::getInstance()->cards()->setStatus($cardId, Card::STATUS_ACTIVE, sprintf(
                 /* translators: %s: order number */
                 __('Order #%s paid', 'wp-woocommerce-store-balance'),
                 $order->get_order_number()
             ));
+
+            // Its delivery date may have come and gone while it was
+            // deactivated, and the send was skipped. Without this it would
+            // be a paid gift card nobody ever received.
+            $card = Plugin::getInstance()->cards()->find($cardId);
+
+            if ($emails && $card && ! $card->deliveredAt) {
+                $emails->deliver($card);
+            }
         }
 
         $order->delete_meta_data(self::ORDER_DISABLED);

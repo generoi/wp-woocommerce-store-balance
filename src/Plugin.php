@@ -14,6 +14,7 @@ use GeneroWP\StoreBalance\Modules\GiftCardProduct;
 use GeneroWP\StoreBalance\Modules\Issuance;
 use GeneroWP\StoreBalance\Modules\OrderAdmin;
 use GeneroWP\StoreBalance\Modules\Orders;
+use GeneroWP\StoreBalance\Modules\PayPalPayments;
 
 class Plugin
 {
@@ -34,6 +35,7 @@ class Plugin
         ClassicCheckout::class,
         Admin::class,
         OrderAdmin::class,
+        PayPalPayments::class,
     ];
 
     public const FILTER_MODULES = 'wc_store_balance_modules';
@@ -85,6 +87,12 @@ class Plugin
         }
 
         $this->booted = true;
+
+        // The translations that ship with the plugin. Ones installed under
+        // wp-content/languages/plugins take precedence, as for any plugin.
+        add_action('init', static function (): void {
+            load_plugin_textdomain(self::TEXT_DOMAIN, false, dirname(plugin_basename(WC_STORE_BALANCE_FILE)).'/languages');
+        }, 0);
 
         add_action('init', [Install::class, 'maybeUpgrade'], 5);
 

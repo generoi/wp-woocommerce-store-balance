@@ -128,6 +128,7 @@ The first returns the card, or a `WP_Error`.
 | `wc_store_balance_cart_state` | The computed balance state of the cart. |
 | `wc_store_balance_ajax_add_to_cart` | Return `true` when the theme adds gift cards to the cart itself through the Store API and sends the gift card fields. |
 | `wc_store_balance_fallback_image_id` | The attachment shown for a gift card product without an image. Return 0 for none. |
+| `wc_store_balance_pay_later_gateways` | Payment methods that count an order as paid before the money has arrived (default: cash on delivery). They are not offered for a cart with a gift card in it. |
 | `wc_store_balance_client_ip` | The address code attempts are counted against. Set it if your proxy passes client-supplied `X-Forwarded-For` through. |
 
 ### Actions
@@ -152,13 +153,31 @@ Everything that goes wrong is written to the WooCommerce log, under the source `
 
 1. The cart total is calculated as usual. The balance is taken off the result.
 2. When the customer places the order, the cards are debited, before payment. The gateway is only asked for what is left. If a card can no longer cover its share the checkout stops and nothing stays debited.
-3. If the order is cancelled, fails, is refunded in full, or is trashed or deleted, what it took is returned to the cards it came from. A card that has expired in the meantime stays valid long enough to spend what came back.
+3. If the order is cancelled, fails, or is set to Refunded, what it took is returned to the cards it came from. So is the balance of an unpaid order that is trashed or deleted; a paid order that is tidied away keeps what it was paid with. A card that has expired in the meantime stays valid long enough to spend what came back.
+
+**Refunds.** WooCommerce's Refund button covers what the payment method was paid, and nothing else. Refunding that amount does not mark the order refunded and does not return the balance: the order gets a note saying how much is still held. Set the order to Refunded to return all of it, or change a card's balance by hand to return part.
+
+**An order that comes back.** A failed or cancelled order that is paid after all takes its balance again. If the balance has been spent elsewhere, the missing amount is added back to the order total and the order is put on hold instead of processing, with a note; a payment cannot move it on, a person has to. Its "pay for order" page always asks the full price, the balance having gone back to the card.
 
 An order that is placed but never paid holds its share of the balance until WooCommerce cancels it (the "hold stock" time), or until the same customer places another order.
 
 Everything that changes an order's balance runs under a per-order database lock, so a payment webhook and the customer's return arriving together cannot return a balance twice or issue a gift card twice.
 
 What an order paid from a balance is kept in order meta (`_store_balance_lines`), and shown as a row in the order totals, in emails and on the order screen.
+
+## Translations
+
+Finnish, Swedish, German, Danish and Norwegian Bokmål ship in `languages/`, with the template (`.pot`) for others. A translation installed under `wp-content/languages/plugins/` takes precedence. After changing strings:
+
+```sh
+wp i18n make-pot . languages/wp-woocommerce-store-balance.pot --exclude=vendor,tests
+```
+
+## Other plugins
+
+- **WooCommerce PayPal Payments** sends PayPal an itemised amount built from the lines. The balance is reported to it as a discount through the gateway's own hooks, so the amount in the PayPal window is what is left to pay.
+- **Express buttons, abandoned-cart links** and anything else that adds a product to the cart by its id: a gift card is refused unless the gift card form's fields come with it. Hide express buttons on gift card product pages; they cannot show the amount chosen.
+- **Currency switchers.** A gift card line remembers the currency its amount was chosen in and is removed from the cart, with a notice, when the cart changes currency.
 
 ## Development
 

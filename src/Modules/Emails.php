@@ -78,6 +78,7 @@ class Emails implements Module
             $sent = (bool) $email->trigger($card);
         } catch (Throwable $e) {
             Logger::exception($e, 'Sending a card email', ['card_id' => $card->id]);
+            $this->noteNotSent($card);
 
             return false;
         }
@@ -86,8 +87,26 @@ class Emails implements Module
             Plugin::getInstance()->cards()->markDelivered($card->id);
         } else {
             Logger::warning('A card email was not sent', ['card_id' => $card->id, 'recipient' => $card->recipientEmail]);
+            $this->noteNotSent($card);
         }
 
         return $sent;
+    }
+
+    /**
+     * A log line alone is easy to miss, and the recipient is waiting. The
+     * order the card was bought on says so too.
+     */
+    protected function noteNotSent(Card $card): void
+    {
+        $order = $card->orderId ? wc_get_order($card->orderId) : null;
+
+        if ($order instanceof \WC_Order) {
+            $order->add_order_note(sprintf(
+                /* translators: %s: masked gift card code */
+                __('The email for gift card %s could not be sent. Check that the gift card email is enabled, then send it again from the card under WooCommerce → Store balance.', 'wp-woocommerce-store-balance'),
+                $card->maskedCode()
+            ));
+        }
     }
 }

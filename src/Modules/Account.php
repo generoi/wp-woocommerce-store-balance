@@ -88,6 +88,7 @@ class Account implements Module
     {
         if (function_exists('is_account_page') && is_account_page()) {
             wp_enqueue_style('wc-store-balance', Plugin::url('assets/frontend.css'), [], WC_STORE_BALANCE_VERSION);
+            wp_enqueue_script('wc-store-balance-account', Plugin::url('assets/account.js'), [], WC_STORE_BALANCE_VERSION, ['in_footer' => true]);
         }
     }
 
@@ -98,12 +99,21 @@ class Account implements Module
      */
     public function loginNotice(): void
     {
+        $message = __('Log in to save your gift card to your account. No account? You do not need one: enter the code in the cart or at checkout under "Have a gift card?".', 'wp-woocommerce-store-balance');
+
+        // Links in emails sent before the code moved behind the "#".
         // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- only decides whether to show a notice.
-        if (empty($_GET['code']) || ! is_string($_GET['code']) || ! Code::isValid(wp_unslash($_GET['code']))) {
+        if (! empty($_GET['code']) && is_string($_GET['code']) && Code::isValid(wp_unslash($_GET['code']))) {
+            wc_print_notice($message, 'notice');
+
             return;
         }
 
-        wc_print_notice(__('Log in to save your gift card to your account. No account? You do not need one: enter the code in the cart or at checkout under "Have a gift card?".', 'wp-woocommerce-store-balance'), 'notice');
+        // The code after the "#" is only known to the browser; account.js
+        // shows this when there is one.
+        echo '<div data-store-balance-login-notice hidden>';
+        wc_print_notice($message, 'notice');
+        echo '</div>';
     }
 
     public function giftCardsPage(): void

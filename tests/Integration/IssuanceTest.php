@@ -568,4 +568,67 @@ class IssuanceTest extends TestCase
 
         $this->assertSame(['Cancelled', 'Cancelled'], $statuses);
     }
+
+    /**
+     * Cancelled, the delivery date passes (the send is skipped for a
+     * deactivated card), then the payment arrives after all.
+     */
+    public function test_a_card_reinstated_after_its_delivery_date_is_sent(): void
+    {
+        $date = (new \DateTimeImmutable('+10 days', wp_timezone()))->format('Y-m-d');
+        $this->addGiftCardToCart($this->giftCardProduct(), ['store_balance_amount' => '50', 'store_balance_to' => 'friend@example.org', 'store_balance_delivery' => $date]);
+        $order = $this->placeOrder();
+        $order->payment_complete();
+        $card = $this->cards->forOrder($order->get_id())[0];
+
+        wc_get_order($order->get_id())->update_status('cancelled');
+        do_action(Emails::ACTION_DELIVER, $card->id);
+        as_unschedule_all_actions(Emails::ACTION_DELIVER, [$card->id], 'wc-store-balance');
+        $this->assertCount(0, $this->emailsTo('friend@example.org'));
+
+        wc_get_order($order->get_id())->update_status('processing');
+
+        // Still before the date here, so it is waiting again rather than lost.
+        $this->assertNotFalse(as_next_scheduled_action(Emails::ACTION_DELIVER, [$card->id], 'wc-store-balance'));
+    }
+
+    public function test_a_card_email_that_cannot_be_sent_is_noted_on_the_order(): void
+    {
+        $this->addGiftCardToCart($this->giftCardProduct(), ['store_balance_amount' => '50', 'store_balance_to' => 'friend@example.org']);
+        $order = $this->placeOrder();
+
+        add_filter('woocommerce_email_enabled_store_balance_gift_card', '__return_false');
+        $order->payment_complete();
+        remove_filter('woocommerce_email_enabled_store_balance_gift_card', '__return_false');
+
+        $notes = implode(' ', array_map(static fn ($note) => $note->content, wc_get_order_notes(['order_id' => $order->get_id()])));
+
+        $this->assertCount(0, $this->emailsTo('friend@example.org'));
+        $this->assertStringContainsString('could not be sent', $notes);
+    }
+
+    /**
+     * An order paid for less than it is worth is waiting for a person; its
+     * gift cards wait with it.
+     */
+    public function test_no_gift_card_is_issued_on_an_order_that_is_short(): void
+    {
+        $customerId = $this->customer();
+        $credit = $this->storeCredit($customerId, 50);
+        $this->actAs($customerId);
+        WC()->cart->add_to_cart($this->product()->get_id());
+        $this->addGiftCardToCart($this->giftCardProduct(), ['store_balance_amount' => '50', 'store_balance_to' => 'friend@example.org']);
+        $order = $this->placeOrder();
+
+        $order->update_status('failed');
+        $this->cards->debit($credit->id, 50, ['note' => 'Spent elsewhere']);
+
+        wc_get_order($order->get_id())->payment_complete();
+
+        $this->assertSame('on-hold', wc_get_order($order->get_id())->get_status());
+        $this->assertSame([], $this->cards->forOrder($order->get_id()));
+
+        wc_get_order($order->get_id())->update_status('processing');
+        $this->assertCount(1, $this->cards->forOrder($order->get_id()));
+    }
 }
