@@ -484,8 +484,14 @@ class Admin implements Module
                 'decimals' => wc_get_price_decimals(),
                 'decimal' => wc_get_price_decimal_separator(),
                 'thousand' => wc_get_price_thousand_separator(),
-                'symbol' => html_entity_decode(get_woocommerce_currency_symbol($card->currency), ENT_QUOTES, 'UTF-8'),
-                'pattern' => html_entity_decode(get_woocommerce_price_format(), ENT_QUOTES, 'UTF-8'),
+                // The same rule as Money::price(): the shop's own format for
+                // its active currency, the plain code for any other.
+                'symbol' => $card->currency === get_woocommerce_currency()
+                    ? html_entity_decode(get_woocommerce_currency_symbol(), ENT_QUOTES, 'UTF-8')
+                    : $card->currency,
+                'pattern' => $card->currency === get_woocommerce_currency()
+                    ? html_entity_decode(get_woocommerce_price_format(), ENT_QUOTES, 'UTF-8')
+                    : "%2\$s\u{a0}%1\$s",
             ]); ?>;
             var above = <?php echo wp_json_encode(sprintf(
                 /* translators: %s: amount */
