@@ -226,7 +226,7 @@ class Admin implements Module
                         : __('Unspent gift cards (%s)', 'wp-woocommerce-store-balance'),
                     $row->currency
                 )),
-                wp_kses_post(wc_price((float) $row->balance, ['currency' => $row->currency])),
+                wp_kses_post(Money::price((float) $row->balance, $row->currency)),
                 esc_html(sprintf(
                     /* translators: %d: number of cards */
                     _n('%d active card', '%d active cards', (int) $row->cards, 'wp-woocommerce-store-balance'),
@@ -276,10 +276,10 @@ class Admin implements Module
         $rows = [
             __('Type', 'wp-woocommerce-store-balance') => esc_html(self::typeLabel($card->type)),
             __('Status', 'wp-woocommerce-store-balance') => self::statusHtml($card),
-            __('Balance', 'wp-woocommerce-store-balance') => '<strong>'.wc_price($card->balance, ['currency' => $card->currency]).'</strong> '.sprintf(
+            __('Balance', 'wp-woocommerce-store-balance') => '<strong>'.Money::price($card->balance, $card->currency).'</strong> '.sprintf(
                 /* translators: %s: amount */
                 esc_html__('of %s', 'wp-woocommerce-store-balance'),
-                wc_price($card->initialAmount, ['currency' => $card->currency])
+                Money::price($card->initialAmount, $card->currency)
             ),
             __('Currency', 'wp-woocommerce-store-balance') => esc_html($card->currency),
             $card->isStoreCredit() ? __('Customer', 'wp-woocommerce-store-balance') : __('In the account of', 'wp-woocommerce-store-balance') => $card->customerId ? self::ownerHtml($card) : esc_html__('Nobody yet: it has not been added to an account', 'wp-woocommerce-store-balance'),
@@ -374,8 +374,8 @@ class Admin implements Module
                 '<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>',
                 esc_html(wp_date(wc_date_format().' '.wc_time_format(), strtotime($tx->created_at.' UTC'))),
                 esc_html($labels[$tx->type] ?? $tx->type),
-                $amount == 0.0 ? '&ndash;' : ($amount > 0 ? '+' : '&minus;').wp_kses_post(wc_price(abs($amount), ['currency' => $card->currency])),
-                wp_kses_post(wc_price((float) $tx->balance_after, ['currency' => $card->currency])),
+                $amount == 0.0 ? '&ndash;' : ($amount > 0 ? '+' : '&minus;').wp_kses_post(Money::price(abs($amount), $card->currency)),
+                wp_kses_post(Money::price((float) $tx->balance_after, $card->currency)),
                 $order ? sprintf('<a href="%s">#%s</a>', esc_url($order->get_edit_order_url()), esc_html($order->get_order_number())) : '&ndash;',
                 $user ? esc_html($user->display_name) : '&ndash;',
                 esc_html((string) $tx->note)

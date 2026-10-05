@@ -27,15 +27,36 @@ class Money
     }
 
     /**
-     * A price as plain text, for an order note, an email subject or a log
+     * An amount in a given currency, as HTML.
+     *
+     * In the currency the shop is showing right now this is WooCommerce's own
+     * formatting. In any other currency it is the number followed by the
+     * currency code: "100.00 EUR". Not wc_price() with a currency argument —
+     * currency switchers filter the currency symbol to the active currency
+     * whatever symbol was asked for, and a card worth 100 euros would be shown
+     * as "$100.00" to a customer shopping in dollars.
+     */
+    public static function price(float|int|string $amount, string $currency = ''): string
+    {
+        $currency = strtoupper($currency);
+
+        if ($currency === '' || $currency === get_woocommerce_currency()) {
+            return wc_price((float) $amount);
+        }
+
+        $number = number_format((float) $amount, wc_get_price_decimals(), wc_get_price_decimal_separator(), wc_get_price_thousand_separator());
+
+        return '<span class="woocommerce-Price-amount amount">'.esc_html($number).'&nbsp;<span class="woocommerce-Price-currencySymbol">'.esc_html($currency).'</span></span>';
+    }
+
+    /**
+     * The same as plain text, for an order note, an email subject or a log
      * line. wc_price() returns HTML; stripping the tags alone leaves
      * "50,00&nbsp;&euro;" behind.
      */
     public static function plain(float|int|string $amount, string $currency = ''): string
     {
-        $html = wc_price((float) $amount, $currency !== '' ? ['currency' => $currency] : []);
-
-        return trim(html_entity_decode(wp_strip_all_tags($html), ENT_QUOTES, 'UTF-8'));
+        return trim(html_entity_decode(wp_strip_all_tags(self::price($amount, $currency)), ENT_QUOTES, 'UTF-8'));
     }
 
     /**

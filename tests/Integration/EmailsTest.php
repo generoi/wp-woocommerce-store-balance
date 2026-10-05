@@ -292,8 +292,10 @@ class EmailsTest extends TestCase
         }
 
         $this->assertSame("50,00\u{a0}€", Money::plain(50));
-        $this->assertStringContainsString('kr', Money::plain(1234.5, 'SEK'));
-        $this->assertStringContainsString('£', Money::plain(99.99, 'GBP'));
+        // Another currency than the shop's is named by its code, not by a
+        // symbol a currency switcher may have replaced.
+        $this->assertStringEndsWith('SEK', Money::plain(1234.5, 'SEK'));
+        $this->assertStringEndsWith('GBP', Money::plain(99.99, 'GBP'));
     }
 
     public function test_the_log_and_the_order_notes_use_plain_prices(): void

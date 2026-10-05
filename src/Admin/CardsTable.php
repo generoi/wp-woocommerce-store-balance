@@ -4,6 +4,7 @@ namespace GeneroWP\StoreBalance\Admin;
 
 use GeneroWP\StoreBalance\Card;
 use GeneroWP\StoreBalance\Modules\Admin;
+use GeneroWP\StoreBalance\Money;
 use GeneroWP\StoreBalance\Plugin;
 use WP_List_Table;
 
@@ -99,7 +100,7 @@ class CardsTable extends WP_List_Table
             esc_html(Admin::typeLabel($card->type)),
             esc_html($card->reference()),
             esc_html($who !== '' ? $who : '–'),
-            wp_kses_post(wc_price($card->balance, ['currency' => $card->currency])),
+            wp_kses_post(Money::price($card->balance, $card->currency)),
             wp_kses_post(wp_strip_all_tags(Admin::statusHtml($card)))
         );
     }
@@ -117,13 +118,13 @@ class CardsTable extends WP_List_Table
      */
     protected function column_balance($card): string
     {
-        $html = wc_price($card->balance, ['currency' => $card->currency]);
+        $html = Money::price($card->balance, $card->currency);
 
         if ($card->balance != $card->initialAmount) {
             $html .= '<br><small>'.sprintf(
                 /* translators: %s: amount */
                 esc_html__('of %s', 'wp-woocommerce-store-balance'),
-                wc_price($card->initialAmount, ['currency' => $card->currency])
+                Money::price($card->initialAmount, $card->currency)
             ).'</small>';
         }
 

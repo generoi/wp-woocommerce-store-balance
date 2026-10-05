@@ -98,6 +98,7 @@ The first returns the card, or a `WP_Error`.
 | `wc_store_balance_gift_card_amounts` | Preset amounts of a gift card product, per currency. |
 | `wc_store_balance_gift_card_custom_amount` | Custom amount limits of a gift card product, per currency. |
 | `wc_store_balance_currencies` | Currencies offered when creating a card in the admin. |
+| `wc_store_balance_currency_url` | URL of the current page in the storefront that sells in a given currency. When set, a customer holding a balance in another currency gets a link to where it can be spent. |
 | `wc_store_balance_expiry_days` | Days a new card is valid for. `0` for no expiry. |
 | `wc_store_balance_delivery_time` | When a scheduled gift card is sent. |
 | `wc_store_balance_max_manual_amount` | The most an admin can put on a card in one go. |

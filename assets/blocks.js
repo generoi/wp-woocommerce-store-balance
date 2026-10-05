@@ -116,6 +116,20 @@
     }
 
     /**
+     * A link to this page in the storefront that sells in a currency, when
+     * the shop has one.
+     */
+    function storeLink(currency) {
+        var url = (settings.currencyUrls || {})[currency];
+
+        if (!url) {
+            return null;
+        }
+
+        return el(wp.element.Fragment, null, ' ', el('a', { href: url, className: 'wc-store-balance__store-link' }, sprintf(t('switchStore'), currency)));
+    }
+
+    /**
      * The code form. Sits with the coupon form, because that is where a
      * customer with a code in hand looks.
      */
@@ -264,7 +278,7 @@
                                 'span',
                                 { className: 'wc-store-balance-form__code-text' },
                                 el('span', { className: 'wc-store-balance-form__code-name' }, sprintf(t('giftCard'), line.masked)),
-                                el('span', { className: 'wc-store-balance-form__code-detail' }, detail)
+                                el('span', { className: 'wc-store-balance-form__code-detail' }, detail, line.reason ? storeLink(line.currency) : null)
                             ),
                             el(
                                 'button',
@@ -401,15 +415,22 @@
             );
         }
 
-        if (other.length) {
+        // A balance in another currency cannot pay for this cart. Say which
+        // currency, and where it can be spent when the shop has told us.
+        other.forEach(function (entry) {
             children.push(
                 el(
                     'div',
-                    { key: 'other', className: 'wc-block-components-totals-item wc-store-balance__note' },
-                    el('span', null, sprintf(t('otherCurrencies'), other.join(' + ')))
+                    { key: 'other-' + entry.currency, className: 'wc-block-components-totals-item wc-store-balance__note' },
+                    el(
+                        'span',
+                        null,
+                        sprintf(t('otherCurrency'), entry.amount, entry.currency),
+                        storeLink(entry.currency)
+                    )
                 )
             );
-        }
+        });
 
         // One row per kind of balance, so a gift card and store credit used
         // together are not folded into a figure nobody can check.

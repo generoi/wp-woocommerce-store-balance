@@ -559,7 +559,7 @@ class Orders implements Module
         foreach (self::byType(self::lines($order)) as $type => $amount) {
             $row['store_balance_'.$type] = [
                 'label' => self::label([['type' => $type]]).':',
-                'value' => '-'.wc_price($amount, ['currency' => $order->get_currency()]),
+                'value' => '-'.Money::price($amount, $order->get_currency()),
             ];
         }
 

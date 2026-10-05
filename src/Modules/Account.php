@@ -183,7 +183,7 @@ class Account implements Module
                     ? __('Gift card added. %s is now in your account and will be used at checkout automatically.', 'wp-woocommerce-store-balance')
                     /* translators: 1: amount, 2: currency code */
                     : __('Gift card added. %1$s is now in your account. It can be used for orders paid in %2$s.', 'wp-woocommerce-store-balance'),
-                wc_price($result->balance, ['currency' => $result->currency]),
+                Money::price($result->balance, $result->currency),
                 $result->currency
             ), 'success');
         }

@@ -76,7 +76,7 @@ class Blocks implements Module
 
             $other = [];
             foreach ($account['other_currencies'] ?? [] as $currency => $amount) {
-                $other[] = Money::plain($amount, (string) $currency);
+                $other[] = ['currency' => (string) $currency, 'amount' => Money::plain($amount, (string) $currency)];
             }
 
             $byType = Orders::byType($state['lines'] ?? []);
@@ -96,6 +96,7 @@ class Blocks implements Module
                 'codes' => array_map(static fn (array $line): array => [
                     'id' => (int) $line['card_id'],
                     'masked' => (string) $line['masked'],
+                    'currency' => (string) $line['currency'],
                     'amount' => $money($line['amount']),
                     'available' => $money($line['available']),
                     'reason' => (string) ($line['reason'] ?? ''),

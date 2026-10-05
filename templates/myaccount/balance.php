@@ -18,6 +18,7 @@
 use GeneroWP\StoreBalance\Card;
 use GeneroWP\StoreBalance\CardRepository;
 use GeneroWP\StoreBalance\Modules\Account;
+use GeneroWP\StoreBalance\Money;
 
 defined('ABSPATH') || exit;
 
@@ -46,7 +47,7 @@ $transaction_labels = [
             <p class="store-balance__amount">
                 <?php
                 echo wp_kses_post(implode(' <span class="store-balance__plus">+</span> ', array_map(
-                    static fn ($amount, $currency) => wc_price($amount, ['currency' => $currency]),
+                    static fn ($amount, $currency) => Money::price($amount, $currency),
                     $balances,
                     array_keys($balances)
                 )));
@@ -135,12 +136,12 @@ $transaction_labels = [
                                 <?php } ?>
                             </td>
                             <td data-title="<?php esc_attr_e('Balance', 'wp-woocommerce-store-balance'); ?>">
-                                <?php echo wp_kses_post(wc_price($card->balance, ['currency' => $card->currency])); ?>
+                                <?php echo wp_kses_post(Money::price($card->balance, $card->currency)); ?>
                                 <?php if ($card->balance < $card->initialAmount) { ?>
                                     <br><small>
                                         <?php
                                     /* translators: %s: amount */
-                                    printf(esc_html__('of %s', 'wp-woocommerce-store-balance'), wp_kses_post(wc_price($card->initialAmount, ['currency' => $card->currency])));
+                                    printf(esc_html__('of %s', 'wp-woocommerce-store-balance'), wp_kses_post(Money::price($card->initialAmount, $card->currency)));
                                     ?>
                                     </small>
                                 <?php } ?>
@@ -209,7 +210,7 @@ $transaction_labels = [
                                 if ($amount == 0.0) {
                                     echo '&ndash;';
                                 } else {
-                                    echo ($amount > 0 ? '+' : '&minus;').wp_kses_post(wc_price(abs($amount), ['currency' => $currency]));
+                                    echo ($amount > 0 ? '+' : '&minus;').wp_kses_post(Money::price(abs($amount), $currency));
                                 }
                         ?>
                             </td>
@@ -239,7 +240,7 @@ $transaction_labels = [
                 <?php foreach ($past as $card) { ?>
                     <li>
                         <?php
-                echo wp_kses_post(wc_price($card->initialAmount, ['currency' => $card->currency]));
+                echo wp_kses_post(Money::price($card->initialAmount, $card->currency));
                     echo ' &ndash; ';
 
                     if (! $card->isActive()) {

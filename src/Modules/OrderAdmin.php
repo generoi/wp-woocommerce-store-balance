@@ -76,7 +76,7 @@ class OrderAdmin implements Module
                     esc_url(Admin::url(['view' => 'card', 'id' => $line['card_id']])),
                     esc_html(Admin::typeLabel($line['type'])),
                     esc_html($line['masked']),
-                    wp_kses_post(wc_price($line['amount'], ['currency' => $currency])),
+                    wp_kses_post(Money::price($line['amount'], $currency)),
                     $line['restored'] > 0
                         ? '<br><small>'.esc_html(sprintf(
                             /* translators: %s: amount */
@@ -146,7 +146,7 @@ class OrderAdmin implements Module
             printf(
                 '<tr><td class="label">%s:</td><td width="1%%"></td><td class="total">&minus;%s</td></tr>',
                 esc_html(Orders::label([['type' => $type]])),
-                wp_kses_post(wc_price($amount, ['currency' => $order->get_currency()]))
+                wp_kses_post(Money::price($amount, $order->get_currency()))
             );
         }
     }

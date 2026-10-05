@@ -68,6 +68,7 @@ class BlocksIntegration implements IntegrationInterface
     {
         return [
             'namespace' => Blocks::NAMESPACE,
+            'currencyUrls' => $this->currencyUrls(),
             'accountUrl' => wc_get_account_endpoint_url(Account::ENDPOINT_GIFT_CARDS),
             'loginUrl' => wc_get_page_permalink('myaccount'),
             'strings' => [
@@ -96,8 +97,10 @@ class BlocksIntegration implements IntegrationInterface
                 'accountSaved' => __('Saved for later. Tick to use it on this order.', 'wp-woocommerce-store-balance'),
                 'balanceOn' => __('Your balance is used on this order.', 'wp-woocommerce-store-balance'),
                 'balanceOff' => __('Your balance is not used on this order.', 'wp-woocommerce-store-balance'),
-                /* translators: %s: list of amounts in other currencies */
-                'otherCurrencies' => __('You also have %s, which can be used for orders in that currency.', 'wp-woocommerce-store-balance'),
+                /* translators: 1: amount with its currency code, 2: currency code */
+                'otherCurrency' => __('You also have %1$s. It can be used for orders in %2$s.', 'wp-woocommerce-store-balance'),
+                /* translators: %s: currency code */
+                'switchStore' => __('Switch to the %s store', 'wp-woocommerce-store-balance'),
                 'onlyGiftCards' => __('Gift cards and store credit cannot be used to buy gift cards.', 'wp-woocommerce-store-balance'),
                 /* translators: %s: amount */
                 'excluded' => __('The gift card in your cart (%s) cannot be paid with a gift card or store credit, so that part is paid another way.', 'wp-woocommerce-store-balance'),
@@ -111,5 +114,56 @@ class BlocksIntegration implements IntegrationInterface
                 'genericError' => __('Something went wrong. Please try again.', 'wp-woocommerce-store-balance'),
             ],
         ];
+    }
+
+    /**
+     * Where the customer can spend a balance that is in another currency: the
+     * page they are on now, in the storefront that sells in that currency.
+     *
+     * The plugin does not know how a shop maps currencies to storefronts —
+     * a domain per country, a language prefix, a switcher parameter — so the
+     * site says, through the filter. Without an answer no link is shown.
+     *
+     * Worked out here, while the page is being rendered, because the cart's
+     * own requests go to the Store API and have no "current page".
+     *
+     * @return array<string, string> currency code => URL
+     */
+    protected function currencyUrls(): array
+    {
+        $urls = [];
+        $active = get_woocommerce_currency();
+        $currencies = [];
+
+        foreach (Plugin::getInstance()->cards()->forCustomer(get_current_user_id()) as $card) {
+            $currencies[$card->currency] = true;
+        }
+
+        $cart = Plugin::getInstance()->module(Modules\Cart::class);
+
+        foreach ($cart ? $cart->state()['codes'] : [] as $line) {
+            $currencies[(string) $line['currency']] = true;
+        }
+
+        foreach (array_keys($currencies) as $currency) {
+            if ($currency === $active) {
+                continue;
+            }
+
+            /**
+             * Filters the URL of the current page in the storefront that sells
+             * in a given currency.
+             *
+             * @param  string  $url  Empty by default: no link is shown.
+             * @param  string  $currency  ISO 4217 code.
+             */
+            $url = (string) apply_filters('wc_store_balance_currency_url', '', $currency);
+
+            if ($url !== '') {
+                $urls[$currency] = esc_url_raw($url);
+            }
+        }
+
+        return $urls;
     }
 }

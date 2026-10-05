@@ -64,7 +64,7 @@ abstract class CardEmail extends WC_Email
 
         return [
             'card' => $card,
-            'amount' => wc_price($card->balance, ['currency' => $card->currency]),
+            'amount' => Money::price($card->balance, $card->currency),
             'expires' => $card->expiresAt ? wp_date(wc_date_format(), $card->expiresAt) : '',
             'shop_url' => wc_get_page_permalink('shop'),
             'account_url' => $this->accountUrl(),
