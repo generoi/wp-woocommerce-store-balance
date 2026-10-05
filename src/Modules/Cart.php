@@ -27,6 +27,9 @@ class Cart implements Module
 
     public const SESSION_USE_BALANCE = 'store_balance_use_balance';
 
+    /** What the balance paid in the totals the customer was last shown. */
+    public const SESSION_SHOWN = 'store_balance_shown';
+
     public const MAX_CODES = 5;
 
     /** @var array<string, mixed>|null */
@@ -70,6 +73,42 @@ class Cart implements Module
         }
 
         return $this->state ?? $this->emptyState();
+    }
+
+    /**
+     * The totals are on their way to the customer's screen: write down what
+     * the balance pays in them.
+     */
+    public function rememberShown(): void
+    {
+        if ($this->hasSession()) {
+            WC()->session->set(self::SESSION_SHOWN, (string) Money::exact($this->state()['applied_total'] ?? 0));
+        }
+    }
+
+    /**
+     * Whether the balance pays less now than in the totals the customer last
+     * saw: a card was spent, by someone else with the same code or in another
+     * tab, between looking and pressing "Place order". The order must not go
+     * through for more than the screen said. Telling once is enough: the new
+     * figure is remembered, so the next attempt passes.
+     */
+    public function paysLessThanShown(): bool
+    {
+        if (! $this->hasSession()) {
+            return false;
+        }
+
+        $shown = WC()->session->get(self::SESSION_SHOWN);
+        $now = Money::exact($this->state()['applied_total'] ?? 0);
+
+        if (! is_numeric($shown) || $now >= (float) $shown - 0.005) {
+            return false;
+        }
+
+        WC()->session->set(self::SESSION_SHOWN, (string) $now);
+
+        return true;
     }
 
     /**
@@ -450,7 +489,7 @@ class Cart implements Module
         $currency = get_woocommerce_currency();
 
         if ($card->currency !== $currency) {
-            return new WP_Error('wc_store_balance_currency', $this->currencyMessage($card, $currency));
+            return new WP_Error('wc_store_balance_currency', $this->currencyMessage($card, $currency), ['currency' => $card->currency]);
         }
 
         return null;

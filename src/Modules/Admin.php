@@ -458,7 +458,7 @@ class Admin implements Module
                 /* translators: %s: currency code */
                 __('New balance (%s)', 'wp-woocommerce-store-balance'),
                 $card->currency
-            )).'</label><br><input type="text" inputmode="decimal" id="sb-balance" name="balance" class="wc_input_price" value="'.esc_attr(wc_format_localized_price(wc_format_decimal($card->balance, wc_get_price_decimals()))).'" required></p>'
+            )).'</label><br><input type="text" inputmode="decimal" id="sb-balance" name="balance" class="wc-store-balance-admin__money" value="'.esc_attr(wc_format_localized_price(wc_format_decimal($card->balance, wc_get_price_decimals()))).'" required></p>'
             .'<p><label for="sb-note">'.esc_html__('Reason', 'wp-woocommerce-store-balance').'</label><br><input type="text" id="sb-note" name="note" class="regular-text" required>'
             .'<span class="description">'.esc_html__('Saved in the history. The customer does not see it.', 'wp-woocommerce-store-balance').'</span></p>',
             sprintf(
@@ -652,7 +652,7 @@ class Admin implements Module
 
         echo '<tr><th scope="row"><label for="sb-amount">'.esc_html__('Amount', 'wp-woocommerce-store-balance').'</label></th><td>';
         echo '<span class="wc-store-balance-admin__amount">';
-        echo '<input type="text" inputmode="decimal" class="wc_input_price" id="sb-amount" name="amount" value="'.esc_attr($this->old('amount')).'" required style="width:10em"> ';
+        echo '<input type="text" inputmode="decimal" class="wc-store-balance-admin__money" id="sb-amount" name="amount" value="'.esc_attr($this->old('amount')).'" required style="width:10em"> ';
 
         if (count($currencies) > 1) {
             echo '<label class="screen-reader-text" for="sb-currency">'.esc_html__('Currency', 'wp-woocommerce-store-balance').'</label>';

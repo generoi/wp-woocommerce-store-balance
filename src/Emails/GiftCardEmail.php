@@ -67,6 +67,6 @@ class GiftCardEmail extends CardEmail
     {
         // After the "#", not as a query argument: a code in the query string
         // ends up in access logs, browser history sync and analytics.
-        return wc_get_account_endpoint_url(Account::ENDPOINT_GIFT_CARDS).'#code='.rawurlencode($this->cardOrSample()->formattedCode());
+        return $this->accountEndpointUrl(Account::ENDPOINT_GIFT_CARDS).'#code='.rawurlencode($this->cardOrSample()->formattedCode());
     }
 }

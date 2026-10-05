@@ -66,7 +66,16 @@ abstract class CardEmail extends WC_Email
             'card' => $card,
             'amount' => Money::price($card->balance, $card->currency),
             'expires' => $card->expiresAt ? wp_date(wc_date_format(), $card->expiresAt) : '',
-            'shop_url' => wc_get_page_permalink('shop'),
+            /**
+             * Filters the shop link in a card email. The email may be sent
+             * from the admin, a payment webhook or a scheduled job, where a
+             * shop with a storefront per currency or language cannot tell
+             * which one the recipient belongs to; the card can.
+             *
+             * @param  string  $url
+             * @param  Card  $card
+             */
+            'shop_url' => (string) apply_filters('wc_store_balance_email_shop_url', wc_get_page_permalink('shop'), $card),
             'account_url' => $this->accountUrl(),
             'email_heading' => $this->get_heading(),
             'additional_content' => $this->get_additional_content(),
@@ -133,6 +142,20 @@ abstract class CardEmail extends WC_Email
     }
 
     abstract protected function accountUrl(): string;
+
+    /**
+     * The My Account page a card email links to, for the same reason as the
+     * shop link.
+     */
+    protected function accountEndpointUrl(string $endpoint): string
+    {
+        /**
+         * @param  string  $url
+         * @param  Card  $card
+         * @param  string  $endpoint  The account endpoint: gift cards or store credit.
+         */
+        return (string) apply_filters('wc_store_balance_email_account_url', wc_get_account_endpoint_url($endpoint), $this->cardOrSample(), $endpoint);
+    }
 
     abstract protected function sampleCard(): Card;
 

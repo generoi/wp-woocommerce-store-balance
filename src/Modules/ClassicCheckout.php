@@ -20,6 +20,8 @@ class ClassicCheckout implements Module
         add_action('woocommerce_cart_totals_before_order_total', [$this, 'totalsRows']);
         add_action('woocommerce_review_order_before_order_total', [$this, 'totalsRows']);
 
+        add_action('woocommerce_cart_totals_after_order_total', [$this, 'shown']);
+        add_action('woocommerce_review_order_after_order_total', [$this, 'shown']);
         add_action('woocommerce_proceed_to_checkout', [$this, 'form'], 5);
         add_action('woocommerce_review_order_before_payment', [$this, 'form']);
 
@@ -71,6 +73,19 @@ class ClassicCheckout implements Module
                 );
             }
         });
+    }
+
+    /**
+     * The order review, drawn on page load and redrawn after every
+     * "update_checkout": the totals the customer is looking at.
+     */
+    public function shown(): void
+    {
+        $cart = Plugin::getInstance()->module(Cart::class);
+
+        if ($cart) {
+            $cart->rememberShown();
+        }
     }
 
     public function form(): void

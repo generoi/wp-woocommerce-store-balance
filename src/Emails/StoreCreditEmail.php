@@ -50,6 +50,6 @@ class StoreCreditEmail extends CardEmail
 
     protected function accountUrl(): string
     {
-        return wc_get_account_endpoint_url(Account::ENDPOINT_STORE_CREDIT);
+        return $this->accountEndpointUrl(Account::ENDPOINT_STORE_CREDIT);
     }
 }

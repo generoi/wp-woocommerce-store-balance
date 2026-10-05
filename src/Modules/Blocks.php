@@ -71,6 +71,12 @@ class Blocks implements Module
         return Logger::guard('Store API cart data', function (): array {
             $cart = Plugin::getInstance()->module(Cart::class);
             $state = $cart ? $cart->state() : [];
+
+            // Every cart the Store API sends out is one the customer sees.
+            if ($cart) {
+                $cart->rememberShown();
+            }
+
             $money = static fn ($amount): string => (string) woocommerce_store_api_get_formatter('money')->format($amount);
             $account = $state['account'] ?? [];
 
@@ -175,7 +181,7 @@ class Blocks implements Module
                 $result = $cart->applyCode(sanitize_text_field(Input::text($data['code'] ?? '')));
 
                 if (is_wp_error($result)) {
-                    throw new RouteException((string) $result->get_error_code(), $result->get_error_message(), 400);
+                    throw new RouteException((string) $result->get_error_code(), $result->get_error_message(), 400, (array) $result->get_error_data());
                 }
                 break;
 

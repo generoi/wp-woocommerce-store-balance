@@ -56,7 +56,11 @@ class Money
             return wc_price((float) $amount);
         }
 
-        $number = number_format((float) $amount, wc_get_price_decimals(), wc_get_price_decimal_separator(), wc_get_price_thousand_separator());
+        // Written the way the language being read writes numbers, not the
+        // way the active currency's storefront does: the same card email is
+        // sent from a checkout, from the admin and from a scheduled job, and
+        // must not say "250,00 SEK" in one and "250.00 SEK" in another.
+        $number = number_format_i18n((float) $amount, wc_get_price_decimals());
 
         return '<span class="woocommerce-Price-amount amount">'.esc_html($number).'&nbsp;<span class="woocommerce-Price-currencySymbol">'.esc_html($currency).'</span></span>';
     }

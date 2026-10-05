@@ -5,7 +5,7 @@ msgstr ""
 "Project-Id-Version: WooCommerce Store Balance 0.1.5\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/wp-woocommerce-"
 "store-balance\n"
-"POT-Creation-Date: 2026-10-05T10:19:21+03:00\n"
+"POT-Creation-Date: 2026-10-05T10:55:17+03:00\n"
 "PO-Revision-Date: 2026-10-05 10:30+0300\n"
 "Last-Translator: Genero\n"
 "Language-Team: German\n"
@@ -148,15 +148,15 @@ msgid "Applying…"
 msgstr "Wird angewendet …"
 
 #: src/BlocksIntegration.php:91 src/Modules/Account.php:214
-#: src/Modules/Cart.php:248
+#: src/Modules/Cart.php:287
 msgid "Enter a gift card code."
 msgstr "Gib einen Geschenkkarten-Code ein."
 
-#: src/BlocksIntegration.php:92 src/Modules/ClassicCheckout.php:97
+#: src/BlocksIntegration.php:92 src/Modules/ClassicCheckout.php:112
 msgid "Gift card applied."
 msgstr "Geschenkkarte angewendet."
 
-#: src/BlocksIntegration.php:93 src/Modules/ClassicCheckout.php:106
+#: src/BlocksIntegration.php:93 src/Modules/ClassicCheckout.php:121
 msgid "Gift card removed."
 msgstr "Geschenkkarte entfernt."
 
@@ -277,14 +277,14 @@ msgstr ""
 "Deine Geschenkkarte und dein Shop-Guthaben decken diese Bestellung. Es ist "
 "nichts mehr zu zahlen."
 
-#: src/BlocksIntegration.php:126 src/Modules/ClassicCheckout.php:49
+#: src/BlocksIntegration.php:126 src/Modules/ClassicCheckout.php:51
 msgid "Something went wrong. Please try again."
 msgstr "Etwas ist schiefgelaufen. Bitte versuche es erneut."
 
 #: src/Emails/GiftCardEmail.php:13 src/Modules/Admin.php:92
 #: src/Modules/FallbackImage.php:133 src/Modules/FallbackImage.php:147
 #: src/Modules/GiftCardProduct.php:155 src/Modules/OrderAdmin.php:196
-#: src/Modules/OrderAdmin.php:198 src/Modules/Orders.php:989
+#: src/Modules/OrderAdmin.php:198 src/Modules/Orders.php:1021
 #: templates/myaccount/balance.php:115 templates/myaccount/balance.php:123
 msgid "Gift card"
 msgstr "Geschenkkarte"
@@ -315,7 +315,7 @@ msgstr "Alles Gute zum Geburtstag!"
 
 #: src/Emails/StoreCreditEmail.php:13 src/Modules/Account.php:65
 #: src/Modules/Account.php:84 src/Modules/Admin.php:91
-#: src/Modules/Orders.php:985
+#: src/Modules/Orders.php:1017
 msgid "Store credit"
 msgstr "Shop-Guthaben"
 
@@ -372,12 +372,12 @@ msgstr ""
 "Geschenkkarte hinzugefügt. %1$s sind jetzt in deinem Konto. Du kannst das "
 "Guthaben für Bestellungen in %2$s verwenden."
 
-#: src/Modules/Account.php:210 src/Modules/Cart.php:244
+#: src/Modules/Account.php:210 src/Modules/Cart.php:283
 msgid "Too many attempts. Please wait ten minutes and try again."
 msgstr ""
 "Zu viele Versuche. Bitte warte zehn Minuten und versuche es dann erneut."
 
-#: src/Modules/Account.php:232 src/Modules/Cart.php:427
+#: src/Modules/Account.php:232 src/Modules/Cart.php:466
 msgid "We could not find that gift card code. Please check it and try again."
 msgstr ""
 "Wir konnten diesen Geschenkkarten-Code nicht finden. Bitte überprüfe ihn und "
@@ -392,12 +392,12 @@ msgid "This gift card has already been added to another account."
 msgstr "Diese Geschenkkarte wurde bereits einem anderen Konto hinzugefügt."
 
 #. translators: %s: date
-#: src/Modules/Account.php:246 src/Modules/Cart.php:433
+#: src/Modules/Account.php:246 src/Modules/Cart.php:472
 #, php-format
 msgid "This gift card expired on %s."
 msgstr "Diese Geschenkkarte ist am %s abgelaufen."
 
-#: src/Modules/Account.php:252 src/Modules/Cart.php:447
+#: src/Modules/Account.php:252 src/Modules/Cart.php:486
 msgid "This gift card has no balance left."
 msgstr "Auf dieser Geschenkkarte ist kein Guthaben mehr."
 
@@ -928,39 +928,39 @@ msgstr "Du bist dazu nicht berechtigt."
 msgid "The expiry date has to be in the future."
 msgstr "Das Ablaufdatum muss in der Zukunft liegen."
 
-#: src/Modules/Cart.php:240
+#: src/Modules/Cart.php:279
 msgid "Your session has expired. Reload the page and try again."
 msgstr ""
 "Deine Sitzung ist abgelaufen. Lade die Seite neu und versuche es erneut."
 
-#: src/Modules/Cart.php:263
+#: src/Modules/Cart.php:302
 msgid "This gift card is already applied."
 msgstr "Diese Geschenkkarte wurde bereits angewendet."
 
 #. translators: %d: number of gift cards
-#: src/Modules/Cart.php:269
+#: src/Modules/Cart.php:308
 #, php-format
 msgid "You can use at most %d gift cards on one order."
 msgstr "Du kannst höchstens %d Geschenkkarten pro Bestellung verwenden."
 
-#: src/Modules/Cart.php:275
+#: src/Modules/Cart.php:314
 msgid "Gift cards cannot be used to buy gift cards."
 msgstr ""
 "Geschenkkarten können nicht zum Kauf von Geschenkkarten verwendet werden."
 
 #. translators: 1: the card's currency code, 2: the cart's currency code
-#: src/Modules/Cart.php:413
+#: src/Modules/Cart.php:452
 #, php-format
 msgid "This gift card is in %1$s and cannot be used for an order in %2$s."
 msgstr ""
 "Diese Geschenkkarte lautet auf %1$s und kann nicht für eine Bestellung in "
 "%2$s verwendet werden."
 
-#: src/Modules/Cart.php:440
+#: src/Modules/Cart.php:479
 msgid "This gift card is already in your account balance."
 msgstr "Diese Geschenkkarte ist bereits Teil deines Kontoguthabens."
 
-#: src/Modules/Cart.php:443
+#: src/Modules/Cart.php:482
 msgid ""
 "This gift card has been added to an account. Log in to that account to use "
 "it."
@@ -968,13 +968,13 @@ msgstr ""
 "Diese Geschenkkarte wurde einem Konto hinzugefügt. Melde dich bei diesem "
 "Konto an, um sie zu verwenden."
 
-#: src/Modules/ClassicCheckout.php:139
+#: src/Modules/ClassicCheckout.php:154
 msgid "Your session expired. Reload the page and try again."
 msgstr ""
 "Deine Sitzung ist abgelaufen. Lade die Seite neu und versuche es erneut."
 
 #. translators: %s: masked gift card code
-#: src/Modules/Emails.php:107
+#: src/Modules/Emails.php:113
 #, php-format
 msgid ""
 "The email for gift card %s could not be sent. Check that the gift card email "
@@ -1326,20 +1326,7 @@ msgstr ""
 msgid "Created when the order is paid"
 msgstr "Wird erstellt, sobald die Bestellung bezahlt ist"
 
-#: src/Modules/Orders.php:215
-msgid "The customer placed a new order instead of paying this one."
-msgstr ""
-"Der Kunde hat eine neue Bestellung aufgegeben, statt diese zu bezahlen."
-
-#: src/Modules/Orders.php:252
-msgid "Checkout retried"
-msgstr "Bezahlvorgang erneut versucht"
-
-#: src/Modules/Orders.php:287
-msgid "Checkout aborted"
-msgstr "Bezahlvorgang abgebrochen"
-
-#: src/Modules/Orders.php:311
+#: src/Modules/Orders.php:138 src/Modules/Orders.php:343
 msgid ""
 "Your gift card or store credit balance has changed. Please review the order "
 "total and try again."
@@ -1347,23 +1334,36 @@ msgstr ""
 "Das Guthaben deiner Geschenkkarte oder dein Shop-Guthaben hat sich geändert. "
 "Bitte prüfe die Bestellsumme und versuche es erneut."
 
+#: src/Modules/Orders.php:247
+msgid "The customer placed a new order instead of paying this one."
+msgstr ""
+"Der Kunde hat eine neue Bestellung aufgegeben, statt diese zu bezahlen."
+
+#: src/Modules/Orders.php:284
+msgid "Checkout retried"
+msgstr "Bezahlvorgang erneut versucht"
+
+#: src/Modules/Orders.php:319
+msgid "Checkout aborted"
+msgstr "Bezahlvorgang abgebrochen"
+
 #. translators: 1: amount, 2: list of masked card codes
-#: src/Modules/Orders.php:329
+#: src/Modules/Orders.php:361
 #, php-format
 msgid "%1$s paid with gift card / store credit (%2$s)."
 msgstr "%1$s mit Geschenkkarte / Shop-Guthaben bezahlt (%2$s)."
 
-#: src/Modules/Orders.php:358 src/Modules/Orders.php:642
+#: src/Modules/Orders.php:390 src/Modules/Orders.php:674
 msgid "Order removed"
 msgstr "Bestellung gelöscht"
 
 #. translators: %s: order status
-#: src/Modules/Orders.php:360
+#: src/Modules/Orders.php:392
 #, php-format
 msgid "Order %s"
 msgstr "Bestellung %s"
 
-#: src/Modules/Orders.php:530
+#: src/Modules/Orders.php:562
 msgid ""
 "The gift card or store credit on this order is no longer applied, so its "
 "total has changed. Please review it and pay again."
@@ -1373,7 +1373,7 @@ msgstr ""
 "bezahle erneut."
 
 #. translators: %s: amount
-#: src/Modules/Orders.php:585
+#: src/Modules/Orders.php:617
 #, php-format
 msgid ""
 "The %s of gift card / store credit this order was placed with is not on it "
@@ -1384,7 +1384,7 @@ msgstr ""
 "zu zahlenden Betrag hinzugerechnet."
 
 #. translators: %s: amount
-#: src/Modules/Orders.php:617
+#: src/Modules/Orders.php:649
 #, php-format
 msgid ""
 "The amount paid through the payment method has been refunded. %s was paid "
@@ -1399,17 +1399,17 @@ msgstr ""
 "einer Karte manuell, um einen Teil zurückzugeben."
 
 #. translators: 1: amount, 2: the cards it went back to, e.g. "Gift card ••••-AB12, Store credit #75"
-#: src/Modules/Orders.php:744
+#: src/Modules/Orders.php:776
 #, php-format
 msgid "%1$s returned to %2$s."
 msgstr "%1$s zurückgebucht auf %2$s."
 
-#: src/Modules/Orders.php:768
+#: src/Modules/Orders.php:800
 msgid "Order reopened"
 msgstr "Bestellung wieder geöffnet"
 
 #. translators: %s: amount
-#: src/Modules/Orders.php:798
+#: src/Modules/Orders.php:830
 #, php-format
 msgid ""
 "This order was reopened, but %s of the gift card / store credit it was paid "
@@ -1421,7 +1421,7 @@ msgstr ""
 "ausgegeben. Dieser Betrag wurde wieder zur Bestellsumme hinzugerechnet und "
 "ist unbezahlt: Fordere ihn ein oder storniere die Bestellung."
 
-#: src/Modules/Orders.php:992
+#: src/Modules/Orders.php:1024
 msgid "Gift card & store credit"
 msgstr "Geschenkkarte & Shop-Guthaben"
 

@@ -139,6 +139,9 @@
         var code = useState('');
         var busy = useState(false);
         var error = useState('');
+        // The currency of a card that was refused for being in another one,
+        // so the message can point to the storefront where it can be spent.
+        var errorCurrency = useState('');
 
         if (!data) {
             return null;
@@ -151,6 +154,7 @@
 
             if (error[0]) {
                 error[1]('');
+                errorCurrency[1]('');
             }
         }
 
@@ -175,6 +179,7 @@
 
             busy[1](true);
             error[1]('');
+            errorCurrency[1]('');
 
             update({ action: 'apply', code: code[0] })
                 .then(function () {
@@ -183,6 +188,7 @@
                     focusInput();
                 })
                 .catch(function (e) {
+                    errorCurrency[1](String((e && e.code === 'wc_store_balance_currency' && e.data && e.data.currency) || ''));
                     fail(errorMessage(e));
                 })
                 .finally(function () {
@@ -256,7 +262,7 @@
                         : el('button', { type: 'submit', className: 'wp-element-button', 'aria-disabled': busy[0] ? 'true' : undefined }, t('apply'))
                 ),
             error[0]
-                ? el('p', { id: 'wc-store-balance-error', className: 'wc-store-balance__error', role: 'alert' }, error[0])
+                ? el('p', { id: 'wc-store-balance-error', className: 'wc-store-balance__error', role: 'alert' }, error[0], errorCurrency[0] ? storeLink(errorCurrency[0]) : null)
                 : null,
             codes.length
                 ? el(

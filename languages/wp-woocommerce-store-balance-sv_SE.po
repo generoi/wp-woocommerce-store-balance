@@ -5,7 +5,7 @@ msgstr ""
 "Project-Id-Version: WooCommerce Store Balance 0.1.5\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/wp-woocommerce-"
 "store-balance\n"
-"POT-Creation-Date: 2026-10-05T10:19:21+03:00\n"
+"POT-Creation-Date: 2026-10-05T10:55:17+03:00\n"
 "PO-Revision-Date: 2026-10-05 12:00+0300\n"
 "Last-Translator: Genero\n"
 "Language-Team: Swedish\n"
@@ -147,15 +147,15 @@ msgid "Applying…"
 msgstr "Lägger till…"
 
 #: src/BlocksIntegration.php:91 src/Modules/Account.php:214
-#: src/Modules/Cart.php:248
+#: src/Modules/Cart.php:287
 msgid "Enter a gift card code."
 msgstr "Ange en presentkortskod."
 
-#: src/BlocksIntegration.php:92 src/Modules/ClassicCheckout.php:97
+#: src/BlocksIntegration.php:92 src/Modules/ClassicCheckout.php:112
 msgid "Gift card applied."
 msgstr "Presentkortet har lagts till."
 
-#: src/BlocksIntegration.php:93 src/Modules/ClassicCheckout.php:106
+#: src/BlocksIntegration.php:93 src/Modules/ClassicCheckout.php:121
 msgid "Gift card removed."
 msgstr "Presentkortet har tagits bort."
 
@@ -269,14 +269,14 @@ msgstr ""
 "Ditt presentkort och tillgodohavande täcker hela beställningen. Inget mer "
 "att betala."
 
-#: src/BlocksIntegration.php:126 src/Modules/ClassicCheckout.php:49
+#: src/BlocksIntegration.php:126 src/Modules/ClassicCheckout.php:51
 msgid "Something went wrong. Please try again."
 msgstr "Något gick fel. Försök igen."
 
 #: src/Emails/GiftCardEmail.php:13 src/Modules/Admin.php:92
 #: src/Modules/FallbackImage.php:133 src/Modules/FallbackImage.php:147
 #: src/Modules/GiftCardProduct.php:155 src/Modules/OrderAdmin.php:196
-#: src/Modules/OrderAdmin.php:198 src/Modules/Orders.php:989
+#: src/Modules/OrderAdmin.php:198 src/Modules/Orders.php:1021
 #: templates/myaccount/balance.php:115 templates/myaccount/balance.php:123
 msgid "Gift card"
 msgstr "Presentkort"
@@ -307,7 +307,7 @@ msgstr "Grattis på födelsedagen!"
 
 #: src/Emails/StoreCreditEmail.php:13 src/Modules/Account.php:65
 #: src/Modules/Account.php:84 src/Modules/Admin.php:91
-#: src/Modules/Orders.php:985
+#: src/Modules/Orders.php:1017
 msgid "Store credit"
 msgstr "Tillgodohavande"
 
@@ -364,11 +364,11 @@ msgstr ""
 "Presentkortet har lagts till. %1$s finns nu på ditt konto. Det kan användas "
 "för beställningar som betalas i %2$s."
 
-#: src/Modules/Account.php:210 src/Modules/Cart.php:244
+#: src/Modules/Account.php:210 src/Modules/Cart.php:283
 msgid "Too many attempts. Please wait ten minutes and try again."
 msgstr "För många försök. Vänta tio minuter och försök igen."
 
-#: src/Modules/Account.php:232 src/Modules/Cart.php:427
+#: src/Modules/Account.php:232 src/Modules/Cart.php:466
 msgid "We could not find that gift card code. Please check it and try again."
 msgstr ""
 "Vi kunde inte hitta den presentkortskoden. Kontrollera den och försök igen."
@@ -382,12 +382,12 @@ msgid "This gift card has already been added to another account."
 msgstr "Det här presentkortet har redan lagts till på ett annat konto."
 
 #. translators: %s: date
-#: src/Modules/Account.php:246 src/Modules/Cart.php:433
+#: src/Modules/Account.php:246 src/Modules/Cart.php:472
 #, php-format
 msgid "This gift card expired on %s."
 msgstr "Det här presentkortet gick ut %s."
 
-#: src/Modules/Account.php:252 src/Modules/Cart.php:447
+#: src/Modules/Account.php:252 src/Modules/Cart.php:486
 msgid "This gift card has no balance left."
 msgstr "Det här presentkortet har inget saldo kvar."
 
@@ -902,37 +902,37 @@ msgstr "Du har inte behörighet att göra detta."
 msgid "The expiry date has to be in the future."
 msgstr "Utgångsdatumet måste ligga i framtiden."
 
-#: src/Modules/Cart.php:240
+#: src/Modules/Cart.php:279
 msgid "Your session has expired. Reload the page and try again."
 msgstr "Din session har gått ut. Ladda om sidan och försök igen."
 
-#: src/Modules/Cart.php:263
+#: src/Modules/Cart.php:302
 msgid "This gift card is already applied."
 msgstr "Det här presentkortet har redan lagts till."
 
 #. translators: %d: number of gift cards
-#: src/Modules/Cart.php:269
+#: src/Modules/Cart.php:308
 #, php-format
 msgid "You can use at most %d gift cards on one order."
 msgstr "Du kan använda högst %d presentkort per beställning."
 
-#: src/Modules/Cart.php:275
+#: src/Modules/Cart.php:314
 msgid "Gift cards cannot be used to buy gift cards."
 msgstr "Presentkort kan inte användas för att köpa presentkort."
 
 #. translators: 1: the card's currency code, 2: the cart's currency code
-#: src/Modules/Cart.php:413
+#: src/Modules/Cart.php:452
 #, php-format
 msgid "This gift card is in %1$s and cannot be used for an order in %2$s."
 msgstr ""
 "Det här presentkortet är i %1$s och kan inte användas för en beställning i "
 "%2$s."
 
-#: src/Modules/Cart.php:440
+#: src/Modules/Cart.php:479
 msgid "This gift card is already in your account balance."
 msgstr "Det här presentkortet ingår redan i saldot på ditt konto."
 
-#: src/Modules/Cart.php:443
+#: src/Modules/Cart.php:482
 msgid ""
 "This gift card has been added to an account. Log in to that account to use "
 "it."
@@ -940,12 +940,12 @@ msgstr ""
 "Det här presentkortet har lagts till på ett konto. Logga in på det kontot "
 "för att använda det."
 
-#: src/Modules/ClassicCheckout.php:139
+#: src/Modules/ClassicCheckout.php:154
 msgid "Your session expired. Reload the page and try again."
 msgstr "Din session har gått ut. Ladda om sidan och försök igen."
 
 #. translators: %s: masked gift card code
-#: src/Modules/Emails.php:107
+#: src/Modules/Emails.php:113
 #, php-format
 msgid ""
 "The email for gift card %s could not be sent. Check that the gift card email "
@@ -1296,19 +1296,7 @@ msgstr ""
 msgid "Created when the order is paid"
 msgstr "Skapas när beställningen har betalats"
 
-#: src/Modules/Orders.php:215
-msgid "The customer placed a new order instead of paying this one."
-msgstr "Kunden lade en ny beställning i stället för att betala den här."
-
-#: src/Modules/Orders.php:252
-msgid "Checkout retried"
-msgstr "Nytt försök i kassan"
-
-#: src/Modules/Orders.php:287
-msgid "Checkout aborted"
-msgstr "Kassan avbröts"
-
-#: src/Modules/Orders.php:311
+#: src/Modules/Orders.php:138 src/Modules/Orders.php:343
 msgid ""
 "Your gift card or store credit balance has changed. Please review the order "
 "total and try again."
@@ -1316,23 +1304,35 @@ msgstr ""
 "Saldot på ditt presentkort eller tillgodohavande har ändrats. Kontrollera "
 "beställningens totalsumma och försök igen."
 
+#: src/Modules/Orders.php:247
+msgid "The customer placed a new order instead of paying this one."
+msgstr "Kunden lade en ny beställning i stället för att betala den här."
+
+#: src/Modules/Orders.php:284
+msgid "Checkout retried"
+msgstr "Nytt försök i kassan"
+
+#: src/Modules/Orders.php:319
+msgid "Checkout aborted"
+msgstr "Kassan avbröts"
+
 #. translators: 1: amount, 2: list of masked card codes
-#: src/Modules/Orders.php:329
+#: src/Modules/Orders.php:361
 #, php-format
 msgid "%1$s paid with gift card / store credit (%2$s)."
 msgstr "%1$s betalt med presentkort/tillgodohavande (%2$s)."
 
-#: src/Modules/Orders.php:358 src/Modules/Orders.php:642
+#: src/Modules/Orders.php:390 src/Modules/Orders.php:674
 msgid "Order removed"
 msgstr "Beställningen borttagen"
 
 #. translators: %s: order status
-#: src/Modules/Orders.php:360
+#: src/Modules/Orders.php:392
 #, php-format
 msgid "Order %s"
 msgstr "Beställning %s"
 
-#: src/Modules/Orders.php:530
+#: src/Modules/Orders.php:562
 msgid ""
 "The gift card or store credit on this order is no longer applied, so its "
 "total has changed. Please review it and pay again."
@@ -1341,7 +1341,7 @@ msgstr ""
 "beställningen, så totalsumman har ändrats. Kontrollera den och betala igen."
 
 #. translators: %s: amount
-#: src/Modules/Orders.php:585
+#: src/Modules/Orders.php:617
 #, php-format
 msgid ""
 "The %s of gift card / store credit this order was placed with is not on it "
@@ -1351,7 +1351,7 @@ msgstr ""
 "längre kvar på den, så beloppet har lagts tillbaka på summan att betala."
 
 #. translators: %s: amount
-#: src/Modules/Orders.php:617
+#: src/Modules/Orders.php:649
 #, php-format
 msgid ""
 "The amount paid through the payment method has been refunded. %s was paid "
@@ -1365,17 +1365,17 @@ msgstr ""
 "korten, eller ändra saldot på ett kort manuellt för att återföra en del."
 
 #. translators: 1: amount, 2: the cards it went back to, e.g. "Gift card ••••-AB12, Store credit #75"
-#: src/Modules/Orders.php:744
+#: src/Modules/Orders.php:776
 #, php-format
 msgid "%1$s returned to %2$s."
 msgstr "%1$s återfört till %2$s."
 
-#: src/Modules/Orders.php:768
+#: src/Modules/Orders.php:800
 msgid "Order reopened"
 msgstr "Beställningen öppnad igen"
 
 #. translators: %s: amount
-#: src/Modules/Orders.php:798
+#: src/Modules/Orders.php:830
 #, php-format
 msgid ""
 "This order was reopened, but %s of the gift card / store credit it was paid "
@@ -1387,7 +1387,7 @@ msgstr ""
 "beloppet har lagts tillbaka på beställningens totalsumma och är obetalt: ta "
 "betalt för det eller avbryt beställningen."
 
-#: src/Modules/Orders.php:992
+#: src/Modules/Orders.php:1024
 msgid "Gift card & store credit"
 msgstr "Presentkort och tillgodohavande"
 

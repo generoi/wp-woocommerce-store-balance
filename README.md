@@ -73,7 +73,7 @@ In the cart, the mini cart and the checkout the gift card's details are listed o
 
 My Account gets two pages, **Gift cards** and **Store credit**. Each shows the balance, the cards and their history. Gift cards also has a form to add a code to the account.
 
-At checkout, a logged-in customer with a balance sees "Use my balance", ticked. A gift card code that has not been added to an account is entered under "Add a gift card".
+At checkout, a logged-in customer with a balance sees "Pay with my balance", ticked. A gift card code that has not been added to an account is entered under "Have a gift card?".
 
 When the balance is larger than the order, the card that expires soonest is used first, then the oldest.
 
@@ -125,6 +125,8 @@ The first returns the card, or a `WP_Error`.
 | `wc_store_balance_max_manual_amount` | The most an admin can put on a card in one go. |
 | `wc_store_balance_returned_balance_grace_days` | How long a card stays valid, at least, after a balance has been returned to it. |
 | `wc_store_balance_email_locale` | The locale a card email is written in. |
+| `wc_store_balance_email_shop_url` | The shop link in a card email. |
+| `wc_store_balance_email_account_url` | The My Account link in a card email. |
 | `wc_store_balance_cart_state` | The computed balance state of the cart. |
 | `wc_store_balance_ajax_add_to_cart` | Return `true` when the theme adds gift cards to the cart itself through the Store API and sends the gift card fields. |
 | `wc_store_balance_fallback_image_id` | The attachment shown for a gift card product without an image. Return 0 for none. |

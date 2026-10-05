@@ -85,6 +85,12 @@ class Emails implements Module
 
         if ($sent) {
             Plugin::getInstance()->cards()->markDelivered($card->id);
+
+            // Sent by hand before its date: the scheduled send would deliver
+            // it a second time.
+            if (function_exists('as_unschedule_all_actions')) {
+                as_unschedule_all_actions(self::ACTION_DELIVER, [$card->id], 'wc-store-balance');
+            }
         } else {
             Logger::warning('A card email was not sent', ['card_id' => $card->id, 'recipient' => $card->recipientEmail]);
             $this->noteNotSent($card);

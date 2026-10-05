@@ -631,4 +631,19 @@ class IssuanceTest extends TestCase
         wc_get_order($order->get_id())->update_status('processing');
         $this->assertCount(1, $this->cards->forOrder($order->get_id()));
     }
+
+    public function test_a_scheduled_card_sent_by_hand_is_not_sent_again_on_its_date(): void
+    {
+        $date = (new \DateTimeImmutable('+10 days', wp_timezone()))->format('Y-m-d');
+        $this->addGiftCardToCart($this->giftCardProduct(), ['store_balance_amount' => '50', 'store_balance_to' => 'friend@example.org', 'store_balance_delivery' => $date]);
+        $order = $this->placeOrder();
+        $order->payment_complete();
+        $card = $this->cards->forOrder($order->get_id())[0];
+        $this->assertNotFalse(as_next_scheduled_action(Emails::ACTION_DELIVER, [$card->id], 'wc-store-balance'));
+
+        Plugin::getInstance()->module(Emails::class)->send($card);
+
+        $this->assertFalse(as_next_scheduled_action(Emails::ACTION_DELIVER, [$card->id], 'wc-store-balance'));
+        $this->assertCount(1, $this->emailsTo('friend@example.org'));
+    }
 }

@@ -106,3 +106,10 @@
 .wc-store-balance-summary__applied .wc-block-components-totals-item__value {
     white-space: nowrap;
 }
+
+/* A link inside a notice or an error: recognisable as one whatever the theme does to links in the checkout. */
+.wc-store-balance__store-link {
+    text-decoration: underline;
+    font-weight: 600;
+    color: inherit;
+}

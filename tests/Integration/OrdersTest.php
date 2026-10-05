@@ -1440,4 +1440,48 @@ class OrdersTest extends TestCase
 
         $this->assertSame(10.55, $this->balance($card));
     }
+
+    /**
+     * Two people with the same code, or one person with two tabs: the totals
+     * on screen say the gift card pays 50, and by the time "Place order" is
+     * pressed it pays nothing. The order must not go through at the higher
+     * price with nothing said.
+     */
+    public function test_an_order_is_not_placed_for_more_than_the_totals_the_customer_saw(): void
+    {
+        $card = $this->giftCard(50);
+        WC()->cart->add_to_cart($this->product()->get_id());
+        $this->assertNotWPError($this->cart()->applyCode($card->code));
+        WC()->cart->calculate_totals();
+        $this->cart()->rememberShown();
+
+        // Spent by someone else in the meantime.
+        $this->cards->debit($card->id, 50, ['note' => 'Other session']);
+
+        WC()->cart->calculate_totals();
+        $result = WC()->checkout()->create_order($this->checkoutData());
+
+        $this->assertWPError($result);
+        $this->assertStringContainsString('balance has changed', $result->get_error_message());
+
+        // Told once. The totals on screen are the new ones now.
+        WC()->cart->calculate_totals();
+        $this->assertIsInt(WC()->checkout()->create_order($this->checkoutData()));
+    }
+
+    public function test_a_balance_that_pays_what_was_shown_or_more_places_the_order(): void
+    {
+        $customerId = $this->customer();
+        $card = $this->storeCredit($customerId, 50);
+        $this->actAs($customerId);
+        WC()->cart->add_to_cart($this->product()->get_id());
+        WC()->cart->calculate_totals();
+        $this->cart()->rememberShown();
+
+        $this->cards->credit($card->id, 25, CardRepository::TX_ADJUST, ['note' => 'Topped up']);
+
+        $order = $this->placeOrder();
+
+        $this->assertSame(75.0, Orders::held($order));
+    }
 }

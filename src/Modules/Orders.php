@@ -99,6 +99,8 @@ class Orders implements Module
         $cart = Plugin::getInstance()->module(Cart::class);
         $lines = $cart ? $cart->state()['lines'] : [];
 
+        $this->refuseIfBalanceChanged($cart);
+
         if ($lines) {
             $order->update_meta_data(self::META_PENDING, array_map(static fn (array $line) => [
                 'card_id' => (int) $line['card_id'],
@@ -110,6 +112,36 @@ class Orders implements Module
         } else {
             $order->update_meta_data(self::META_PENDING, []);
         }
+    }
+
+    /**
+     * The customer pressed "Place order" on totals in which the balance paid
+     * more than it can now. Without this the order would go through for the
+     * higher amount with nothing said: the cart is recalculated before
+     * anything is debited, so the debit itself has nothing to object to.
+     *
+     * @throws Exception
+     */
+    protected function refuseIfBalanceChanged(?Cart $cart): void
+    {
+        // The Store API also comes through here while the checkout page is
+        // only keeping its draft up to date. Placing the order is a POST.
+        $placing = doing_action('woocommerce_checkout_create_order')
+            || (did_action('rest_api_init') && strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? '')) === 'POST');
+
+        if (! $cart || ! $placing || ! $cart->paysLessThanShown()) {
+            return;
+        }
+
+        Logger::warning('Checkout stopped: the balance pays less than the totals the customer was shown');
+
+        $message = __('Your gift card or store credit balance has changed. Please review the order total and try again.', 'wp-woocommerce-store-balance');
+
+        if (class_exists(RouteException::class) && doing_action('woocommerce_store_api_checkout_update_order_meta')) {
+            throw new RouteException('wc_store_balance_changed', $message, 409);
+        }
+
+        throw new Exception($message);
     }
 
     /**
