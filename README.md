@@ -48,6 +48,23 @@ The card is created when the order is paid and emailed to the recipient, right a
 
 **WooCommerce → Store balance → Add store credit** puts credit on a customer account. The customer gets an email with the amount and no code.
 
+### Themes that add to the cart without a page load
+
+A script that adds to the cart through the Store API usually sends a product id and a quantity and nothing else, so the gift card form is posted to the page the ordinary way by default.
+
+To add gift cards the same way as other products, send the form's `store_balance_*` fields in the body of the `cart/add-item` request, and tell the plugin the theme does so:
+
+```php
+add_filter('wc_store_balance_ajax_add_to_cart', '__return_true');
+```
+
+```js
+// Every named field of the gift card form, next to id and quantity.
+{ id: 123, quantity: 1, store_balance_amount: '50', store_balance_to: 'friend@example.com' }
+```
+
+The fields are checked exactly as the form post is; a refusal comes back as a 400 with the reason.
+
 ### For the customer
 
 My Account gets two pages, **Gift cards** and **Store credit**. Each shows the balance, the cards and their history. Gift cards also has a form to add a code to the account.
@@ -105,6 +122,7 @@ The first returns the card, or a `WP_Error`.
 | `wc_store_balance_returned_balance_grace_days` | How long a card stays valid, at least, after a balance has been returned to it. |
 | `wc_store_balance_email_locale` | The locale a card email is written in. |
 | `wc_store_balance_cart_state` | The computed balance state of the cart. |
+| `wc_store_balance_ajax_add_to_cart` | Return `true` when the theme adds gift cards to the cart itself through the Store API and sends the gift card fields. |
 | `wc_store_balance_client_ip` | The address code attempts are counted against. Set it if your proxy passes client-supplied `X-Forwarded-For` through. |
 
 ### Actions

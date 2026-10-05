@@ -13,6 +13,7 @@ use GeneroWP\StoreBalance\Money;
  * @var array<string, string> $values
  * @var array<string, string> $errors keyed by field: amount, custom_amount, to, message, delivery
  * @var string $notices the result of the last "Add to cart", already rendered
+ * @var bool $ajax whether the theme adds the gift card to the cart itself, through the Store API
  * @var int $message_length
  * @var string $min_date
  * @var string $max_date
@@ -65,7 +66,7 @@ $error = static function (string $field) use ($errors): void {
 };
 ?>
 
-<div class="store-balance-gift-card" data-store-balance-gift-card>
+<div class="store-balance-gift-card" data-store-balance-gift-card<?php echo empty($ajax) ? '' : ' data-store-balance-ajax'; ?>>
 
     <?php if ($notices !== '') { ?>
         <div class="store-balance-gift-card__notices" data-store-balance-notices tabindex="-1">

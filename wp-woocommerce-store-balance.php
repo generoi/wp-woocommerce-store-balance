@@ -4,7 +4,7 @@
 Plugin Name:  WooCommerce Store Balance
 Plugin URI:   https://github.com/generoi/wp-woocommerce-store-balance
 Description:  Gift cards and store credit for WooCommerce: one balance engine, spent after tax like a payment, locked to its currency.
-Version:      0.1.3
+Version:      0.1.4
 Requires at least: 6.6
 Requires PHP: 8.0
 Requires Plugins: woocommerce
@@ -22,7 +22,7 @@ if (! defined('ABSPATH')) {
     exit;
 }
 
-define('WC_STORE_BALANCE_VERSION', '0.1.3');
+define('WC_STORE_BALANCE_VERSION', '0.1.4');
 define('WC_STORE_BALANCE_FILE', __FILE__);
 define('WC_STORE_BALANCE_PATH', __DIR__);
 

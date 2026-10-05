@@ -117,6 +117,26 @@
             update();
         }
 
+        // A theme script that adds to the cart without a page load sends a
+        // product id and a quantity. It does not know about the amount, the
+        // recipient or the message, and the gift card would be refused for
+        // having none. Unless the theme has said it sends them, the form is
+        // posted the ordinary way: this listener runs first and keeps the
+        // submit from reaching the theme's.
+        var form = root.closest('form');
+
+        if (form && !root.hasAttribute('data-store-balance-ajax')) {
+            document.addEventListener(
+                'submit',
+                function (event) {
+                    if (event.target === form) {
+                        event.stopPropagation();
+                    }
+                },
+                true
+            );
+        }
+
         // The page has just reloaded after "Add to cart" and starts at the
         // top; the answer is down here, next to the form.
         var notices = root.querySelector('[data-store-balance-notices]');
@@ -136,7 +156,6 @@
             // A gift card was added. The form came back empty; the quantity
             // should too, or the next one is bought twice by accident.
             if (!invalid) {
-                var form = root.closest('form');
                 var quantity = form ? form.querySelector('input.qty') : null;
 
                 if (quantity) {

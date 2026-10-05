@@ -43,6 +43,9 @@ class GiftCardProduct implements Module
     /** @var array<string, string>|null Validation errors of this request, keyed by field. Null when nothing was submitted. */
     protected ?array $errors = null;
 
+    /** Whether this request is adding a gift card through the Store API, with its details already read and checked. */
+    protected bool $viaStoreApi = false;
+
     /** Whether this request added a gift card to the cart. */
     protected bool $added = false;
 
@@ -78,6 +81,7 @@ class GiftCardProduct implements Module
             add_filter('woocommerce_product_get_'.$prop, [$this, 'pinnedPrice'], PHP_INT_MAX, 2);
         }
         add_filter('woocommerce_get_item_data', [$this, 'itemData'], 20, 2);
+        add_filter('woocommerce_store_api_add_to_cart_data', [$this, 'storeApiData'], 20, 2);
         add_action('woocommerce_store_api_validate_add_to_cart', [$this, 'validateStoreApi'], 20, 2);
         add_action('woocommerce_checkout_create_order_line_item', [$this, 'orderLineItem'], 20, 3);
     }
@@ -534,6 +538,16 @@ class GiftCardProduct implements Module
             ],
             'errors' => $this->errors ?? [],
             'notices' => $notices,
+            /**
+             * Filters whether the theme adds gift cards to the cart itself,
+             * through the Store API, with the gift card fields in the request.
+             *
+             * By default the plugin makes the gift card form post to the page
+             * the ordinary way, because a script that adds to the cart without
+             * a page load usually sends a product id and a quantity and
+             * nothing else. A theme whose script sends the fields returns true.
+             */
+            'ajax' => (bool) apply_filters('wc_store_balance_ajax_add_to_cart', false, $product),
             'message_length' => self::MESSAGE_LENGTH,
             'min_date' => wp_date('Y-m-d'),
             'max_date' => wp_date('Y-m-d', time() + YEAR_IN_SECONDS),
@@ -570,6 +584,12 @@ class GiftCardProduct implements Module
         $product = wc_get_product($productId);
 
         if (! self::isGiftCard($product)) {
+            return $passed;
+        }
+
+        // The Store API runs this filter too, for compatibility. Its request
+        // has no $_POST; the details came in its JSON body and are checked.
+        if ($this->viaStoreApi) {
             return $passed;
         }
 
@@ -702,14 +722,90 @@ class GiftCardProduct implements Module
         return $data;
     }
 
+    /** The fields of the gift card form, as the Store API accepts them in an add-item request. */
+    public const FIELDS = [
+        'store_balance_amount',
+        'store_balance_custom_amount',
+        'store_balance_to',
+        'store_balance_from',
+        'store_balance_message',
+        'store_balance_delivery',
+    ];
+
     /**
-     * The Store API can add a product to the cart without the product page —
-     * the "Add to cart" button of a product grid block, or a direct request.
+     * Adding a gift card through the Store API.
+     *
+     * A theme that adds to the cart without a page load posts to
+     * `cart/add-item`, not to the product page. The gift card's details travel
+     * in that request's body under the same names as the form fields:
+     *
+     *     { "id": 123, "quantity": 1, "store_balance_amount": "50",
+     *       "store_balance_to": "friend@example.com", ... }
+     *
+     * They are checked here exactly as the form post is, and become the cart
+     * item's data.
+     *
+     * @param  mixed  $data
+     * @param  mixed  $request
+     * @return mixed
+     *
+     * @throws RouteException
+     */
+    public function storeApiData($data, $request)
+    {
+        if (! is_array($data) || ! $request instanceof \WP_REST_Request) {
+            return $data;
+        }
+
+        $product = wc_get_product(absint($data['id'] ?? 0));
+
+        if (! self::isGiftCard($product)) {
+            return $data;
+        }
+
+        $this->viaStoreApi = false;
+        $input = [];
+
+        foreach (self::FIELDS as $field) {
+            if ($request->has_param($field)) {
+                $input[$field] = $request->get_param($field);
+            }
+        }
+
+        // No details at all: the "Add to cart" button of a product grid, or a
+        // script that only knows a product id. There is an amount to choose.
+        if (! $input) {
+            return $data;
+        }
+
+        $result = $this->parse($product, $input);
+
+        if ($result['errors']) {
+            throw new RouteException('wc_store_balance_invalid_gift_card', esc_html(implode(' ', $result['errors'])), 400);
+        }
+
+        $data['cart_item_data'] = (array) ($data['cart_item_data'] ?? []);
+        $data['cart_item_data'][self::CART_KEY] = $result['data'];
+        $this->viaStoreApi = true;
+
+        return $data;
+    }
+
+    /**
      * A gift card with no amount would sell at the "from" price to nobody.
      */
     public function validateStoreApi($product, $request): void
     {
         if (! self::isGiftCard($product)) {
+            return;
+        }
+
+        // Good for one item only. A batch request can add several, and the
+        // details of one gift card must not wave the next one through.
+        $checked = $this->viaStoreApi;
+        $this->viaStoreApi = false;
+
+        if ($checked) {
             return;
         }
 
