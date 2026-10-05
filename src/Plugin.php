@@ -9,6 +9,7 @@ use GeneroWP\StoreBalance\Modules\Blocks;
 use GeneroWP\StoreBalance\Modules\Cart;
 use GeneroWP\StoreBalance\Modules\ClassicCheckout;
 use GeneroWP\StoreBalance\Modules\Emails;
+use GeneroWP\StoreBalance\Modules\FallbackImage;
 use GeneroWP\StoreBalance\Modules\GiftCardProduct;
 use GeneroWP\StoreBalance\Modules\Issuance;
 use GeneroWP\StoreBalance\Modules\OrderAdmin;
@@ -25,6 +26,7 @@ class Plugin
         Cart::class,
         Orders::class,
         GiftCardProduct::class,
+        FallbackImage::class,
         Issuance::class,
         Emails::class,
         Account::class,

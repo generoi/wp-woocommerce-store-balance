@@ -65,6 +65,10 @@ add_filter('wc_store_balance_ajax_add_to_cart', '__return_true');
 
 The fields are checked exactly as the form post is; a refusal comes back as a 400 with the reason.
 
+A gift card product without an image shows the plugin's own gift card picture. It is added to the media library the first time an admin page is loaded; set a product image to replace it, or delete it from the media library to do without.
+
+In the cart, the mini cart and the checkout the gift card's details are listed one per line with their labels (To, From, Message, Delivery).
+
 ### For the customer
 
 My Account gets two pages, **Gift cards** and **Store credit**. Each shows the balance, the cards and their history. Gift cards also has a form to add a code to the account.
@@ -123,6 +127,7 @@ The first returns the card, or a `WP_Error`.
 | `wc_store_balance_email_locale` | The locale a card email is written in. |
 | `wc_store_balance_cart_state` | The computed balance state of the cart. |
 | `wc_store_balance_ajax_add_to_cart` | Return `true` when the theme adds gift cards to the cart itself through the Store API and sends the gift card fields. |
+| `wc_store_balance_fallback_image_id` | The attachment shown for a gift card product without an image. Return 0 for none. |
 | `wc_store_balance_client_ip` | The address code attempts are counted against. Set it if your proxy passes client-supplied `X-Forwarded-For` through. |
 
 ### Actions

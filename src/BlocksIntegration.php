@@ -35,6 +35,18 @@ class BlocksIntegration implements IntegrationInterface
 
         wp_register_style('wc-store-balance-blocks', Plugin::url('assets/blocks.css'), [], WC_STORE_BALANCE_VERSION);
 
+        wp_register_style('wc-store-balance-details', Plugin::url('assets/details.css'), [], WC_STORE_BALANCE_VERSION);
+
+        // The mini cart can sit on any page, so its few rules load with the
+        // block rather than with the cart and checkout pages.
+        foreach (['woocommerce/mini-cart', 'woocommerce/cart', 'woocommerce/checkout'] as $block) {
+            add_filter("render_block_{$block}", static function ($content) {
+                wp_enqueue_style('wc-store-balance-details');
+
+                return $content;
+            });
+        }
+
         add_action('wp_enqueue_scripts', static function (): void {
             if (wp_script_is(self::HANDLE, 'enqueued') || has_block('woocommerce/cart') || has_block('woocommerce/checkout')) {
                 wp_enqueue_style('wc-store-balance-blocks');

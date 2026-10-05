@@ -1,0 +1,32 @@
+/*
+ * The details of a gift card under its line in the mini cart, the cart and the
+ * checkout: one per line with its label, rather than a run of
+ * "To: … / From: … / Message: …", and wrapped rather than allowed to push the
+ * cart wider than a phone.
+ *
+ * Only the plugin's own rows are touched. The rules are forced because a
+ * theme that styles every product detail the same way (labels hidden, values
+ * in capitals) would leave a list of values nobody can tell apart.
+ */
+.wc-block-components-product-details > :has(.wc-store-balance-detail) {
+    display: block !important;
+    margin: 0.15em 0 0;
+    overflow-wrap: anywhere;
+    text-transform: none !important;
+    letter-spacing: normal;
+}
+
+.wc-block-components-product-details > :has(.wc-store-balance-detail) > .wc-block-components-product-details__name {
+    display: inline !important;
+    font-weight: 600;
+    text-transform: none !important;
+}
+
+.wc-block-components-product-details > :has(.wc-store-balance-detail) > .wc-block-components-product-details__value {
+    font-weight: 400 !important;
+    text-transform: none !important;
+}
+
+.wc-block-components-product-details > :has(.wc-store-balance-detail) > [aria-hidden='true'] {
+    display: none !important;
+}

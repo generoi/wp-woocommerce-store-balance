@@ -384,6 +384,27 @@ class GiftCardProductTest extends TestCase
         $this->assertNotSame('', $shown['Delivery']);
     }
 
+    /**
+     * The wrapper is what the stylesheet holds on to; what the buyer typed is
+     * text inside it, never markup.
+     */
+    public function test_the_cart_details_are_marked_for_the_stylesheet_and_escaped(): void
+    {
+        $this->addGiftCardToCart($this->giftCardProduct(), [
+            'store_balance_amount' => '50',
+            'store_balance_from' => 'Tom & "Jerry"',
+        ]);
+
+        $rows = apply_filters('woocommerce_get_item_data', [], current(WC()->cart->get_cart()));
+        $shown = array_column($rows, 'display', 'key');
+
+        $this->assertSame('<span class="wc-store-balance-detail">Tom &amp; &quot;Jerry&quot;</span>', $shown['From']);
+
+        foreach ($shown as $display) {
+            $this->assertStringStartsWith('<span class="wc-store-balance-detail">', $display);
+        }
+    }
+
     public function test_what_the_buyer_entered_is_carried_onto_the_order_line(): void
     {
         $this->addGiftCardToCart($this->giftCardProduct(), ['store_balance_amount' => '50', 'store_balance_to' => 'friend@example.org']);

@@ -34,7 +34,8 @@
 
 .store-balance-gift-card legend {
     padding: 0;
-    margin-bottom: 0.5em;
+    margin-bottom: 0.6em;
+    font-size: 1.0625em;
     font-weight: 600;
 }
 
@@ -131,24 +132,101 @@
 }
 
 .store-balance-gift-card .form-row {
-    margin: 0 0 1em;
+    float: none;
+    width: 100%;
+    margin: 0 0 1.25em;
+    padding: 0;
+}
+
+.store-balance-gift-card .form-row:last-child {
+    margin-bottom: 0;
 }
 
 .store-balance-gift-card label {
     display: block;
-    margin-bottom: 0.25em;
+    margin-bottom: 0.4em;
+    font-size: 0.9375em;
+    font-weight: 600;
 }
 
 .store-balance-gift-card .store-balance-gift-card__choice {
     display: inline-block;
     margin: 0;
+    font-size: 1em;
+    font-weight: normal;
 }
 
+/*
+ * The fields fill the column they are in and share one shape. The colours are
+ * the theme's own text colour, thinned; the radius and the accent can be set
+ * with --wc-store-balance-radius and --wc-store-balance-accent.
+ */
 .store-balance-gift-card input.input-text,
-.store-balance-gift-card textarea {
+.store-balance-gift-card textarea.input-text {
+    display: block;
     width: 100%;
-    max-width: 28em;
+    max-width: none;
+    min-height: 48px;
     box-sizing: border-box;
+    margin: 0;
+    padding: 0.7em 0.9em;
+    border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+    border-radius: var(--wc-store-balance-radius, 8px);
+    background: #fff;
+    box-shadow: none;
+    color: inherit;
+    font: inherit;
+    line-height: 1.4;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.store-balance-gift-card textarea.input-text {
+    min-height: 6.5em;
+    resize: vertical;
+}
+
+.store-balance-gift-card input.input-text:hover,
+.store-balance-gift-card textarea.input-text:hover {
+    border-color: color-mix(in srgb, currentColor 60%, transparent);
+}
+
+.store-balance-gift-card input.input-text:focus,
+.store-balance-gift-card textarea.input-text:focus {
+    border-color: var(--wc-store-balance-accent, var(--wp--preset--color--primary, #1e1e1e));
+    outline: none;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--wc-store-balance-accent, var(--wp--preset--color--primary, #1e1e1e)) 20%, transparent);
+}
+
+.store-balance-gift-card input.input-text[aria-invalid='true'],
+.store-balance-gift-card textarea.input-text[aria-invalid='true'] {
+    border-color: #b32d2e;
+}
+
+.store-balance-gift-card input.input-text[aria-invalid='true']:focus,
+.store-balance-gift-card textarea.input-text[aria-invalid='true']:focus {
+    box-shadow: 0 0 0 3px color-mix(in srgb, #b32d2e 20%, transparent);
+}
+
+.store-balance-gift-card .store-balance__hint {
+    margin-top: 0.4em;
+    line-height: 1.4;
+}
+
+/* The details are a section of their own, set apart from the amount. */
+.store-balance-gift-card .store-balance-gift-card__details {
+    margin-bottom: 0;
+    padding-top: 1.25em;
+    border-top: 1px solid color-mix(in srgb, currentColor 15%, transparent);
+}
+
+.store-balance-gift-card .store-balance-gift-card__details legend {
+    float: left;
+    width: 100%;
+    margin-bottom: 0.9em;
+}
+
+.store-balance-gift-card .store-balance-gift-card__details legend + * {
+    clear: both;
 }
 
 /* My Account */

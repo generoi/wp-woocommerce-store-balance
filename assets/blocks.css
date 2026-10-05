@@ -106,21 +106,3 @@
 .wc-store-balance-summary__applied .wc-block-components-totals-item__value {
     white-space: nowrap;
 }
-
-/*
- * The details of a gift card under its cart line: one per line rather than a
- * run of "To: … / From: … / Message: …", and wrapped rather than allowed to
- * push the table wider than a phone.
- */
-.wc-block-components-product-details {
-    overflow-wrap: anywhere;
-}
-
-.wc-block-cart-item__product .wc-block-components-product-details > span,
-.wc-block-components-order-summary-item .wc-block-components-product-details > span {
-    display: block;
-}
-
-.wc-block-components-product-details > span > [aria-hidden='true'] {
-    display: none;
-}

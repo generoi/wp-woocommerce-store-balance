@@ -32,3 +32,11 @@ delete_option('wc_store_balance_db_version');
 delete_option('wc_store_balance_settings');
 delete_option('wc_store_balance_flush_rewrite');
 delete_option('wc_store_balance_seeded');
+
+$image = get_option('wc_store_balance_fallback_image');
+
+if (is_numeric($image)) {
+    wp_delete_attachment((int) $image, true);
+}
+
+delete_option('wc_store_balance_fallback_image');

@@ -873,26 +873,42 @@ class GiftCardProduct implements Module
         }
 
         foreach (self::describe($item[self::CART_KEY]) as $label => $value) {
-            $rows[] = ['key' => $label, 'value' => $value];
+            $rows[] = self::detailRow($label, $value);
         }
 
         $quantity = (int) ($item['quantity'] ?? 1);
 
         if ($quantity > 1) {
-            $rows[] = [
-                'key' => __('Quantity', 'wp-woocommerce-store-balance'),
-                'value' => sprintf(
+            $rows[] = self::detailRow(
+                __('Quantity', 'wp-woocommerce-store-balance'),
+                sprintf(
                     empty($item[self::CART_KEY]['to'])
                         /* translators: %d: number of gift cards */
                         ? __('%d separate gift cards, each emailed to you', 'wp-woocommerce-store-balance')
                         /* translators: %d: number of gift cards */
                         : __('%d separate gift cards, each emailed to the same recipient', 'wp-woocommerce-store-balance'),
                     $quantity
-                ),
-            ];
+                )
+            );
         }
 
         return $rows;
+    }
+
+    /**
+     * A row under the line item in the cart. The wrapper gives the plugin's
+     * stylesheet something stable to hold on to: the classes WooCommerce puts
+     * on the row are made from the label, so they change with the language.
+     *
+     * @return array{key: string, value: string, display: string}
+     */
+    private static function detailRow(string $label, string $value): array
+    {
+        return [
+            'key' => $label,
+            'value' => $value,
+            'display' => '<span class="wc-store-balance-detail">'.esc_html($value).'</span>',
+        ];
     }
 
     /**
