@@ -1,0 +1,1757 @@
+# Copyright (C) 2026 Genero
+# This file is distributed under the MIT.
+msgid ""
+msgstr ""
+"Project-Id-Version: WooCommerce Store Balance 0.1.5\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/wp-woocommerce-"
+"store-balance\n"
+"POT-Creation-Date: 2026-10-05T10:19:21+03:00\n"
+"PO-Revision-Date: 2026-10-05 10:30+0300\n"
+"Last-Translator: Genero\n"
+"Language-Team: Finnish\n"
+"Language: fi\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Generator: WP-CLI 2.12.0\n"
+"X-Domain: wp-woocommerce-store-balance\n"
+
+#. Plugin Name of the plugin
+#: wp-woocommerce-store-balance.php:4
+msgid "WooCommerce Store Balance"
+msgstr "WooCommerce Store Balance"
+
+#. Plugin URI of the plugin
+#: wp-woocommerce-store-balance.php:5
+msgid "https://github.com/generoi/wp-woocommerce-store-balance"
+msgstr "https://github.com/generoi/wp-woocommerce-store-balance"
+
+#. Description of the plugin
+#: wp-woocommerce-store-balance.php:6
+msgid ""
+"Gift cards and store credit for WooCommerce: one balance engine, spent after "
+"tax like a payment, locked to its currency."
+msgstr ""
+"Lahjakortit ja ostohyvitykset WooCommerceen: yksi saldojärjestelmä, jossa "
+"saldo käytetään maksun tapaan verojen jälkeen ja se on sidottu omaan "
+"valuuttaansa."
+
+#. Author of the plugin
+#: wp-woocommerce-store-balance.php:11
+msgid "Genero"
+msgstr "Genero"
+
+#. Author URI of the plugin
+#: wp-woocommerce-store-balance.php:12
+msgid "https://genero.fi/"
+msgstr "https://genero.fi/"
+
+#: src/Admin/CardsTable.php:28
+msgid "Card"
+msgstr "Kortti"
+
+#: src/Admin/CardsTable.php:29
+msgid "Customer / recipient"
+msgstr "Asiakas / vastaanottaja"
+
+#: src/Admin/CardsTable.php:30 src/Modules/Admin.php:279
+#: templates/myaccount/balance.php:116 templates/myaccount/balance.php:138
+msgid "Balance"
+msgstr "Saldo"
+
+#: src/Admin/CardsTable.php:31 src/Modules/Admin.php:278
+msgid "Status"
+msgstr "Tila"
+
+#: src/Admin/CardsTable.php:32 src/Modules/Admin.php:309
+#: src/Modules/Admin.php:681
+msgid "Expires"
+msgstr "Vanhenee"
+
+#: src/Admin/CardsTable.php:33 src/Modules/Admin.php:313
+#: src/Modules/Admin.php:363
+msgid "Order"
+msgstr "Tilaus"
+
+#: src/Admin/CardsTable.php:34 src/Modules/Admin.php:310
+msgid "Created"
+msgstr "Luotu"
+
+#: src/Admin/CardsTable.php:63 src/Modules/Admin.php:113
+msgid "Active"
+msgstr "Aktiivinen"
+
+#: src/Admin/CardsTable.php:64 src/Modules/Admin.php:106
+msgid "Spent"
+msgstr "Käytetty"
+
+#: src/Admin/CardsTable.php:65 src/Modules/Admin.php:102
+msgid "Expired"
+msgstr "Vanhentunut"
+
+#: src/Admin/CardsTable.php:66 src/Modules/Admin.php:98
+#: src/Modules/Admin.php:357
+msgid "Deactivated"
+msgstr "Poistettu käytöstä"
+
+#: src/Admin/CardsTable.php:74
+msgid "No cards match your search."
+msgstr "Haullasi ei löytynyt kortteja."
+
+#: src/Admin/CardsTable.php:79
+msgid "No gift cards or store credit yet."
+msgstr "Ei vielä lahjakortteja tai ostohyvityksiä."
+
+#. translators: %s: amount
+#: src/Admin/CardsTable.php:126 src/Modules/Admin.php:281
+#: templates/myaccount/balance.php:144
+#, php-format
+msgid "of %s"
+msgstr "/ %s"
+
+#: src/Admin/CardsTable.php:185
+msgid "Filter by type"
+msgstr "Suodata tyypin mukaan"
+
+#: src/Admin/CardsTable.php:187
+msgid "All types"
+msgstr "Kaikki tyypit"
+
+#: src/Admin/CardsTable.php:193
+msgid "Filter by status"
+msgstr "Suodata tilan mukaan"
+
+#: src/Admin/CardsTable.php:195
+msgid "All statuses"
+msgstr "Kaikki tilat"
+
+#: src/Admin/CardsTable.php:201
+msgid "Filter"
+msgstr "Suodata"
+
+#: src/BlocksIntegration.php:87
+msgid "Have a gift card?"
+msgstr "Onko sinulla lahjakortti?"
+
+#: src/BlocksIntegration.php:88 templates/checkout/balance-form.php:19
+#: templates/checkout/balance-form.php:24 templates/myaccount/balance.php:81
+msgid "Gift card code"
+msgstr "Lahjakortin koodi"
+
+#: src/BlocksIntegration.php:89
+msgid "Apply"
+msgstr "Käytä"
+
+#: src/BlocksIntegration.php:90
+msgid "Applying…"
+msgstr "Otetaan käyttöön…"
+
+#: src/BlocksIntegration.php:91 src/Modules/Account.php:214
+#: src/Modules/Cart.php:248
+msgid "Enter a gift card code."
+msgstr "Syötä lahjakortin koodi."
+
+#: src/BlocksIntegration.php:92 src/Modules/ClassicCheckout.php:97
+msgid "Gift card applied."
+msgstr "Lahjakortti otettu käyttöön."
+
+#: src/BlocksIntegration.php:93 src/Modules/ClassicCheckout.php:106
+msgid "Gift card removed."
+msgstr "Lahjakortti poistettu."
+
+#. translators: %s: masked gift card code
+#: src/BlocksIntegration.php:95
+#, php-format
+msgid "Remove gift card %s"
+msgstr "Poista lahjakortti %s"
+
+#: src/BlocksIntegration.php:96 templates/checkout/balance-form.php:59
+msgid "Remove"
+msgstr "Poista"
+
+#. translators: %s: masked gift card code
+#: src/BlocksIntegration.php:98 templates/checkout/balance-form.php:46
+#, php-format
+msgid "Gift card %s"
+msgstr "Lahjakortti %s"
+
+#. translators: 1: amount used, 2: amount left
+#: src/BlocksIntegration.php:100
+#, php-format
+msgid "%1$s used · %2$s left on the card"
+msgstr "%1$s käytetty · kortille jää %2$s"
+
+#: src/BlocksIntegration.php:101 src/BlocksIntegration.php:108
+msgid "Not used: the order is already covered"
+msgstr "Ei käytetty: tilaus on jo katettu"
+
+#. translators: %s: amount
+#: src/BlocksIntegration.php:103
+#, php-format
+msgid "Pay with my balance (%s available)"
+msgstr "Maksa saldollani (käytettävissä %s)"
+
+#. translators: 1: gift card amount, 2: store credit amount
+#: src/BlocksIntegration.php:105
+#, php-format
+msgid "%1$s in gift cards, %2$s in store credit"
+msgstr "Lahjakortteja %1$s, ostohyvitystä %2$s"
+
+#. translators: 1: amount used, 2: amount left
+#: src/BlocksIntegration.php:107
+#, php-format
+msgid "%1$s used on this order · %2$s stays in your account"
+msgstr "Tähän tilaukseen käytetään %1$s · tilillesi jää %2$s"
+
+#: src/BlocksIntegration.php:109
+msgid "Saved for later. Tick to use it on this order."
+msgstr ""
+"Säästetty myöhempään. Valitse, jos haluat käyttää sen tähän tilaukseen."
+
+#: src/BlocksIntegration.php:110
+msgid "Your balance is used on this order."
+msgstr "Saldosi käytetään tähän tilaukseen."
+
+#: src/BlocksIntegration.php:111
+msgid "Your balance is not used on this order."
+msgstr "Saldoasi ei käytetä tähän tilaukseen."
+
+#. translators: 1: amount with its currency code, 2: currency code
+#: src/BlocksIntegration.php:113
+#, php-format
+msgid "You also have %1$s. It can be used for orders in %2$s."
+msgstr ""
+"Sinulla on myös %1$s. Sen voi käyttää tilauksiin, joiden valuutta on %2$s."
+
+#. translators: %s: currency code
+#: src/BlocksIntegration.php:115
+#, php-format
+msgid "Switch to the %s store"
+msgstr "Siirry %s-kauppaan"
+
+#: src/BlocksIntegration.php:116 templates/checkout/balance-form.php:16
+msgid "Gift cards and store credit cannot be used to buy gift cards."
+msgstr "Lahjakortteja ei voi ostaa lahjakortilla tai ostohyvityksellä."
+
+#. translators: %s: amount
+#: src/BlocksIntegration.php:118
+#, php-format
+msgid ""
+"The gift card in your cart (%s) cannot be paid with a gift card or store "
+"credit, so that part is paid another way."
+msgstr ""
+"Ostoskorissasi olevaa lahjakorttia (%s) ei voi maksaa lahjakortilla tai "
+"ostohyvityksellä, joten se osuus maksetaan muulla tavalla."
+
+#: src/BlocksIntegration.php:119
+msgid "Left to pay after gift card"
+msgstr "Maksettavaa jää lahjakortin jälkeen"
+
+#: src/BlocksIntegration.php:120
+msgid "Left to pay after store credit"
+msgstr "Maksettavaa jää ostohyvityksen jälkeen"
+
+#: src/BlocksIntegration.php:122
+msgid "Left to pay after your balance"
+msgstr "Maksettavaa jää saldosi jälkeen"
+
+#: src/BlocksIntegration.php:123
+msgid "Your gift card covers this order. Nothing more to pay."
+msgstr "Lahjakorttisi kattaa tämän tilauksen. Muuta maksettavaa ei jää."
+
+#: src/BlocksIntegration.php:124
+msgid "Your store credit covers this order. Nothing more to pay."
+msgstr "Ostohyvityksesi kattaa tämän tilauksen. Muuta maksettavaa ei jää."
+
+#: src/BlocksIntegration.php:125
+msgid "Your gift card and store credit cover this order. Nothing more to pay."
+msgstr ""
+"Lahjakorttisi ja ostohyvityksesi kattavat tämän tilauksen. Muuta maksettavaa "
+"ei jää."
+
+#: src/BlocksIntegration.php:126 src/Modules/ClassicCheckout.php:49
+msgid "Something went wrong. Please try again."
+msgstr "Jokin meni pieleen. Yritä uudelleen."
+
+#: src/Emails/GiftCardEmail.php:13 src/Modules/Admin.php:92
+#: src/Modules/FallbackImage.php:133 src/Modules/FallbackImage.php:147
+#: src/Modules/GiftCardProduct.php:155 src/Modules/OrderAdmin.php:196
+#: src/Modules/OrderAdmin.php:198 src/Modules/Orders.php:989
+#: templates/myaccount/balance.php:115 templates/myaccount/balance.php:123
+msgid "Gift card"
+msgstr "Lahjakortti"
+
+#: src/Emails/GiftCardEmail.php:14
+msgid "Sent to the recipient of a gift card, with the code."
+msgstr "Lähetetään lahjakortin vastaanottajalle, sisältää koodin."
+
+#: src/Emails/GiftCardEmail.php:30
+msgid "Your {amount} gift card from {site_title}"
+msgstr "{amount} arvoinen lahjakorttisi – {site_title}"
+
+#: src/Emails/GiftCardEmail.php:31
+msgid "You have received a {amount} gift card from {sender}"
+msgstr "{sender} lähetti sinulle {amount} arvoisen lahjakortin"
+
+#: src/Emails/GiftCardEmail.php:37
+msgid "Your gift card is ready"
+msgstr "Lahjakorttisi on valmis"
+
+#: src/Emails/GiftCardEmail.php:38
+msgid "A gift card for you"
+msgstr "Lahjakortti sinulle"
+
+#: src/Emails/GiftCardEmail.php:50
+msgid "Happy birthday!"
+msgstr "Hyvää syntymäpäivää!"
+
+#: src/Emails/StoreCreditEmail.php:13 src/Modules/Account.php:65
+#: src/Modules/Account.php:84 src/Modules/Admin.php:91
+#: src/Modules/Orders.php:985
+msgid "Store credit"
+msgstr "Ostohyvitys"
+
+#: src/Emails/StoreCreditEmail.php:14
+msgid ""
+"Sent to a customer when store credit is added to their account. It carries "
+"no code: the credit is tied to the account."
+msgstr ""
+"Lähetetään asiakkaalle, kun hänen tililleen lisätään ostohyvitystä. "
+"Viestissä ei ole koodia: hyvitys on sidottu tiliin."
+
+#: src/Emails/StoreCreditEmail.php:24
+msgid "You have {amount} in store credit at {site_title}"
+msgstr "Sinulla on {amount} ostohyvitystä – {site_title}"
+
+#: src/Emails/StoreCreditEmail.php:29
+msgid "You have store credit"
+msgstr "Sinulla on ostohyvitystä"
+
+#: src/Modules/Account.php:64 src/Modules/Account.php:79
+msgid "Gift cards"
+msgstr "Lahjakortit"
+
+#: src/Modules/Account.php:102
+msgid ""
+"Log in to save your gift card to your account. No account? You do not need "
+"one: enter the code in the cart or at checkout under \"Have a gift card?\"."
+msgstr ""
+"Kirjaudu sisään, niin voit tallentaa lahjakortin tilillesi. Eikö sinulla ole "
+"tiliä? Et tarvitse sitä: syötä koodi ostoskorissa tai kassalla kohtaan "
+"\"Onko sinulla lahjakortti?\"."
+
+#: src/Modules/Account.php:180
+msgid "Your session expired. Please try again."
+msgstr "Istuntosi on vanhentunut. Yritä uudelleen."
+
+#. translators: %s: amount
+#: src/Modules/Account.php:193
+#, php-format
+msgid ""
+"Gift card added. %s is now in your account and will be used at checkout "
+"automatically."
+msgstr ""
+"Lahjakortti lisätty. Tililläsi on nyt %s, ja se käytetään kassalla "
+"automaattisesti."
+
+#. translators: 1: amount, 2: currency code
+#: src/Modules/Account.php:195
+#, php-format
+msgid ""
+"Gift card added. %1$s is now in your account. It can be used for orders paid "
+"in %2$s."
+msgstr ""
+"Lahjakortti lisätty. Tililläsi on nyt %1$s. Sen voi käyttää tilauksiin, "
+"jotka maksetaan valuutassa %2$s."
+
+#: src/Modules/Account.php:210 src/Modules/Cart.php:244
+msgid "Too many attempts. Please wait ten minutes and try again."
+msgstr "Liian monta yritystä. Odota kymmenen minuuttia ja yritä uudelleen."
+
+#: src/Modules/Account.php:232 src/Modules/Cart.php:427
+msgid "We could not find that gift card code. Please check it and try again."
+msgstr "Lahjakortin koodia ei löytynyt. Tarkista koodi ja yritä uudelleen."
+
+#: src/Modules/Account.php:236
+msgid "This gift card is already in your account."
+msgstr "Tämä lahjakortti on jo tililläsi."
+
+#: src/Modules/Account.php:240 src/Modules/Account.php:257
+msgid "This gift card has already been added to another account."
+msgstr "Tämä lahjakortti on jo lisätty toiselle tilille."
+
+#. translators: %s: date
+#: src/Modules/Account.php:246 src/Modules/Cart.php:433
+#, php-format
+msgid "This gift card expired on %s."
+msgstr "Tämä lahjakortti vanheni %s."
+
+#: src/Modules/Account.php:252 src/Modules/Cart.php:447
+msgid "This gift card has no balance left."
+msgstr "Tällä lahjakortilla ei ole enää saldoa."
+
+#: src/Modules/Admin.php:47 src/Modules/Admin.php:48 src/Modules/Admin.php:170
+msgid "Store balance"
+msgstr "Asiakassaldot"
+
+#: src/Modules/Admin.php:110
+msgid "Scheduled"
+msgstr "Ajastettu"
+
+#: src/Modules/Admin.php:132
+msgid "Not added to an account"
+msgstr "Ei lisätty tilille"
+
+#: src/Modules/Admin.php:163
+msgid "Cards & credits"
+msgstr "Lahjakortit ja ostohyvitykset"
+
+#: src/Modules/Admin.php:164 src/Modules/Admin.php:612
+#: src/Modules/OrderAdmin.php:122
+msgid "Add store credit"
+msgstr "Lisää ostohyvitystä"
+
+#: src/Modules/Admin.php:165 src/Modules/Admin.php:644
+msgid "Create gift card"
+msgstr "Luo lahjakortti"
+
+#: src/Modules/Admin.php:166
+msgid "Settings"
+msgstr "Asetukset"
+
+#: src/Modules/Admin.php:215
+msgid "Unspent gift cards and store credit"
+msgstr "Käyttämättömät lahjakortit ja ostohyvitykset"
+
+#. translators: %s: currency code
+#: src/Modules/Admin.php:224
+#, php-format
+msgid "Unspent store credit (%s)"
+msgstr "Käyttämätön ostohyvitys (%s)"
+
+#. translators: %s: currency code
+#: src/Modules/Admin.php:226
+#, php-format
+msgid "Unspent gift cards (%s)"
+msgstr "Käyttämättömät lahjakortit (%s)"
+
+#. translators: %d: number of cards
+#: src/Modules/Admin.php:232
+#, php-format
+msgid "%d active card"
+msgid_plural "%d active cards"
+msgstr[0] "%d aktiivinen kortti"
+msgstr[1] "%d aktiivista korttia"
+
+#. translators: %s: search term
+#: src/Modules/Admin.php:249
+#, php-format
+msgid "Search results for: %s"
+msgstr "Hakutulokset: %s"
+
+#: src/Modules/Admin.php:251
+msgid "Show all"
+msgstr "Näytä kaikki"
+
+#: src/Modules/Admin.php:256
+msgid "Search"
+msgstr "Hae"
+
+#: src/Modules/Admin.php:257
+msgid ""
+"Search by gift card code (or its last four characters), store credit number, "
+"email or customer name."
+msgstr ""
+"Hae lahjakortin koodilla (tai sen neljällä viimeisellä merkillä), "
+"ostohyvityksen numerolla, sähköpostiosoitteella tai asiakkaan nimellä."
+
+#: src/Modules/Admin.php:268 src/Modules/Admin.php:861
+msgid "That card does not exist."
+msgstr "Korttia ei ole olemassa."
+
+#: src/Modules/Admin.php:277
+msgid "Type"
+msgstr "Tyyppi"
+
+#: src/Modules/Admin.php:284 src/Modules/Admin.php:658
+msgid "Currency"
+msgstr "Valuutta"
+
+#: src/Modules/Admin.php:285 src/Modules/Admin.php:590
+msgid "Customer"
+msgstr "Asiakas"
+
+#: src/Modules/Admin.php:285
+msgid "In the account of"
+msgstr "Kenen tilillä"
+
+#: src/Modules/Admin.php:285
+msgid "Nobody yet: it has not been added to an account"
+msgstr "Ei vielä kenenkään: korttia ei ole lisätty tilille"
+
+#: src/Modules/Admin.php:289
+msgid "Code"
+msgstr "Koodi"
+
+#: src/Modules/Admin.php:290
+msgid "Copied"
+msgstr "Kopioitu"
+
+#: src/Modules/Admin.php:290
+msgid "Copy"
+msgstr "Kopioi"
+
+#: src/Modules/Admin.php:291
+msgid "Sent to"
+msgstr "Lähetetty osoitteeseen"
+
+#: src/Modules/Admin.php:292 src/Modules/Admin.php:633
+#: src/Modules/GiftCardProduct.php:1071
+msgid "From"
+msgstr "Lähettäjä"
+
+#: src/Modules/Admin.php:293 src/Modules/Admin.php:637
+#: src/Modules/GiftCardProduct.php:1075
+#: templates/product/gift-card-form.php:181
+msgid "Message"
+msgstr "Viesti"
+
+#: src/Modules/Admin.php:296 src/Modules/Admin.php:607
+msgid "Email"
+msgstr "Sähköposti"
+
+#. translators: %s: date and time
+#: src/Modules/Admin.php:299
+#, php-format
+msgid "Sent %s"
+msgstr "Lähetetty %s"
+
+#. translators: %s: date and time
+#: src/Modules/Admin.php:305
+#, php-format
+msgid "Scheduled for %s"
+msgstr "Ajastettu: %s"
+
+#: src/Modules/Admin.php:308
+msgid "Not sent"
+msgstr "Ei lähetetty"
+
+#: src/Modules/Admin.php:309 templates/myaccount/balance.php:150
+msgid "No expiry"
+msgstr "Ei vanhene"
+
+#: src/Modules/Admin.php:316
+msgid "All cards and credits"
+msgstr "Kaikki lahjakortit ja ostohyvitykset"
+
+#. translators: 1: order number, 2: order status, 3: amount
+#: src/Modules/Admin.php:323
+#, php-format
+msgid ""
+"Deactivated because order #%1$s is %2$s. Activating it gives its owner %3$s "
+"that the shop has not been paid for."
+msgstr ""
+"Poistettu käytöstä, koska tilauksen #%1$s tila on %2$s. Jos aktivoit kortin, "
+"sen omistaja saa käyttöönsä %3$s, josta kauppa ei ole saanut maksua."
+
+#: src/Modules/Admin.php:351
+msgid "Issued"
+msgstr "Myönnetty"
+
+#: src/Modules/Admin.php:352
+msgid "Added to an account"
+msgstr "Lisätty tilille"
+
+#: src/Modules/Admin.php:353
+msgid "Used"
+msgstr "Käytetty"
+
+#: src/Modules/Admin.php:354
+msgid "Returned"
+msgstr "Palautettu"
+
+#: src/Modules/Admin.php:355 templates/myaccount/balance.php:32
+msgid "Refunded"
+msgstr "Hyvitetty"
+
+#: src/Modules/Admin.php:356
+msgid "Adjusted"
+msgstr "Muutettu"
+
+#: src/Modules/Admin.php:358
+msgid "Activated"
+msgstr "Aktivoitu"
+
+#: src/Modules/Admin.php:361 templates/myaccount/balance.php:172
+msgid "History"
+msgstr "Historia"
+
+#: src/Modules/Admin.php:363 templates/myaccount/balance.php:176
+#: templates/myaccount/balance.php:191
+msgid "Date"
+msgstr "Päivämäärä"
+
+#: src/Modules/Admin.php:363
+msgid "Event"
+msgstr "Tapahtuma"
+
+#: src/Modules/Admin.php:363 src/Modules/Admin.php:653
+#: templates/myaccount/balance.php:178 templates/myaccount/balance.php:208
+#: templates/product/gift-card-form.php:78
+msgid "Amount"
+msgstr "Summa"
+
+#: src/Modules/Admin.php:363
+msgid "Balance after"
+msgstr "Saldo tapahtuman jälkeen"
+
+#: src/Modules/Admin.php:363
+msgid "By"
+msgstr "Tekijä"
+
+#: src/Modules/Admin.php:363
+msgid "Note"
+msgstr "Huomautus"
+
+#: src/Modules/Admin.php:405
+msgid "Actions"
+msgstr "Toiminnot"
+
+#: src/Modules/Admin.php:412
+msgid "Send the email again"
+msgstr "Lähetä sähköposti uudelleen"
+
+#: src/Modules/Admin.php:412
+msgid "Send the email now"
+msgstr "Lähetä sähköposti nyt"
+
+#. translators: %s: email address
+#: src/Modules/Admin.php:419
+#, php-format
+msgid "Tells %s how much store credit they have. No code is sent."
+msgstr ""
+"Kertoo vastaanottajalle %s, paljonko hänellä on ostohyvitystä. Koodia ei "
+"lähetetä."
+
+#. translators: %s: email address
+#: src/Modules/Admin.php:421
+#, php-format
+msgid "Sends the gift card, with its code, to %s."
+msgstr "Lähettää lahjakortin koodeineen osoitteeseen %s."
+
+#: src/Modules/Admin.php:430
+msgid "Deactivate"
+msgstr "Poista käytöstä"
+
+#: src/Modules/Admin.php:434
+msgid ""
+"A deactivated card cannot be spent. The balance is kept and it can be "
+"activated again."
+msgstr ""
+"Käytöstä poistettua korttia ei voi käyttää. Saldo säilyy, ja kortin voi "
+"aktivoida uudelleen."
+
+#: src/Modules/Admin.php:439
+msgid "Activate"
+msgstr "Aktivoi"
+
+#. translators: %s: amount
+#: src/Modules/Admin.php:444
+#, php-format
+msgid "Activate this card? Its owner will be able to spend %s."
+msgstr "Aktivoidaanko tämä kortti? Sen omistaja voi sen jälkeen käyttää %s."
+
+#: src/Modules/Admin.php:451
+msgid "Change the balance"
+msgstr "Muuta saldoa"
+
+#: src/Modules/Admin.php:455
+msgid "Save new balance"
+msgstr "Tallenna uusi saldo"
+
+#. translators: %s: currency code
+#: src/Modules/Admin.php:459
+#, php-format
+msgid "New balance (%s)"
+msgstr "Uusi saldo (%s)"
+
+#: src/Modules/Admin.php:462 src/Modules/Admin.php:600
+msgid "Reason"
+msgstr "Syy"
+
+#: src/Modules/Admin.php:463 src/Modules/Admin.php:602
+msgid "Saved in the history. The customer does not see it."
+msgstr "Tallennetaan historiaan. Asiakas ei näe sitä."
+
+#. translators: 1: current balance, 2: placeholder for the new balance, 3: placeholder for the difference
+#: src/Modules/Admin.php:466
+#, php-format
+msgid "Change the balance from %1$s to %2$s (%3$s)?"
+msgstr "Muutetaanko saldoa: %1$s → %2$s (%3$s)?"
+
+#. translators: %s: amount
+#: src/Modules/Admin.php:498
+#, php-format
+msgid "This is more than the card's original %s."
+msgstr "Tämä on enemmän kuin kortin alkuperäinen arvo %s."
+
+#: src/Modules/Admin.php:587
+msgid ""
+"Store credit is tied to the customer's account. They do not get a code: it "
+"is used at checkout automatically when they are logged in."
+msgstr ""
+"Ostohyvitys on sidottu asiakkaan tiliin. Asiakas ei saa koodia: hyvitys "
+"käytetään kassalla automaattisesti, kun hän on kirjautunut sisään."
+
+#: src/Modules/Admin.php:591
+msgid "Search for a customer…"
+msgstr "Hae asiakasta…"
+
+#: src/Modules/Admin.php:601
+msgid "E.g. goodwill for a late delivery, order #1234"
+msgstr "Esim. hyvitys myöhästyneestä toimituksesta, tilaus #1234"
+
+#: src/Modules/Admin.php:608
+msgid "Tell the customer by email"
+msgstr "Ilmoita asiakkaalle sähköpostilla"
+
+#: src/Modules/Admin.php:623
+msgid ""
+"Create a gift card without an order: a prize, a replacement, or a balance "
+"moved from another system."
+msgstr ""
+"Luo lahjakortti ilman tilausta: esimerkiksi palkinto, korvaava kortti tai "
+"toisesta järjestelmästä siirretty saldo."
+
+#: src/Modules/Admin.php:628 templates/product/gift-card-form.php:140
+msgid "Recipient's email"
+msgstr "Vastaanottajan sähköpostiosoite"
+
+#: src/Modules/Admin.php:630
+msgid ""
+"We email the gift card to them. Leave empty to only create the code: it is "
+"shown on the next screen for you to copy and hand over."
+msgstr ""
+"Lähetämme lahjakortin hänelle sähköpostilla. Jätä tyhjäksi, jos haluat vain "
+"luoda koodin: se näytetään seuraavassa näkymässä, josta voit kopioida sen ja "
+"antaa eteenpäin."
+
+#: src/Modules/Admin.php:671
+msgid "A balance can only be spent on orders in its own currency."
+msgstr "Saldon voi käyttää vain tilauksiin, joissa on sama valuutta."
+
+#: src/Modules/Admin.php:683
+msgid "The last day it can be used. Leave empty for no expiry."
+msgstr "Viimeinen käyttöpäivä. Jätä tyhjäksi, jos kortti ei vanhene."
+
+#: src/Modules/Admin.php:697
+msgid "Gift cards are valid for"
+msgstr "Lahjakorttien voimassaoloaika"
+
+#: src/Modules/Admin.php:698
+msgid "Store credit is valid for"
+msgstr "Ostohyvityksen voimassaoloaika"
+
+#: src/Modules/Admin.php:701
+msgid "days"
+msgstr "päivää"
+
+#: src/Modules/Admin.php:702
+msgid ""
+"0 means no expiry. Applies to cards created from now on; existing ones keep "
+"their date."
+msgstr ""
+"0 tarkoittaa, ettei kortti vanhene. Koskee tästä eteenpäin luotavia "
+"kortteja; aiemmin luotujen päivämäärä ei muutu."
+
+#. translators: %s: link to the log screen
+#: src/Modules/Admin.php:709
+#, php-format
+msgid "Problems are recorded in the %s."
+msgstr "Ongelmat kirjataan tänne: %s."
+
+#: src/Modules/Admin.php:710
+msgid "WooCommerce log"
+msgstr "WooCommercen loki"
+
+#: src/Modules/Admin.php:738
+msgid ""
+"Enter the amount as a number greater than zero, for example 25 or 24,90."
+msgstr "Anna summa nollaa suurempana lukuna, esimerkiksi 25 tai 24,90."
+
+#. translators: %s: amount
+#: src/Modules/Admin.php:744
+#, php-format
+msgid "The amount is too large. At most %s can be added at a time."
+msgstr "Summa on liian suuri. Kerralla voi lisätä enintään %s."
+
+#: src/Modules/Admin.php:761
+msgid "Choose a customer."
+msgstr "Valitse asiakas."
+
+#. translators: 1: amount, 2: customer name
+#: src/Modules/Admin.php:787
+#, php-format
+msgid "%1$s store credit added for %2$s."
+msgstr "Ostohyvitystä lisätty %1$s asiakkaalle %2$s."
+
+#. translators: %s: email address
+#: src/Modules/Admin.php:794 src/Modules/Admin.php:918
+#, php-format
+msgid "Email sent to %s."
+msgstr "Sähköposti lähetetty osoitteeseen %s."
+
+#: src/Modules/Admin.php:796
+msgid "The email could not be sent; the problem has been logged."
+msgstr "Sähköpostia ei voitu lähettää; ongelma on kirjattu lokiin."
+
+#: src/Modules/Admin.php:798
+msgid "No email was sent."
+msgstr "Sähköpostia ei lähetetty."
+
+#: src/Modules/Admin.php:813
+msgid "Enter a valid email address for the recipient."
+msgstr "Anna vastaanottajalle kelvollinen sähköpostiosoite."
+
+#: src/Modules/Admin.php:827
+msgid "Created in the admin"
+msgstr "Luotu hallintapaneelissa"
+
+#: src/Modules/Admin.php:831
+msgid "The gift card could not be created. The error has been logged."
+msgstr "Lahjakorttia ei voitu luoda. Virhe on kirjattu lokiin."
+
+#: src/Modules/Admin.php:837
+msgid ""
+"Gift card created. Nothing was emailed: copy the code below and hand it over."
+msgstr ""
+"Lahjakortti luotu. Sähköpostia ei lähetetty: kopioi alla oleva koodi ja anna "
+"se eteenpäin."
+
+#. translators: %s: email address
+#: src/Modules/Admin.php:845
+#, php-format
+msgid "Gift card created and emailed to %s."
+msgstr "Lahjakortti luotu ja lähetetty sähköpostilla osoitteeseen %s."
+
+#: src/Modules/Admin.php:850
+msgid ""
+"Gift card created, but the email could not be sent; the problem has been "
+"logged. Use \"Send the email now\", or hand over the code below."
+msgstr ""
+"Lahjakortti luotu, mutta sähköpostia ei voitu lähettää; ongelma on kirjattu "
+"lokiin. Käytä toimintoa \"Lähetä sähköposti nyt\" tai anna alla oleva koodi "
+"eteenpäin."
+
+#: src/Modules/Admin.php:868
+msgid "Deactivated in the admin"
+msgstr "Poistettu käytöstä hallintapaneelissa"
+
+#: src/Modules/Admin.php:869
+msgid "Card deactivated. It can no longer be spent."
+msgstr "Kortti poistettu käytöstä. Sitä ei voi enää käyttää."
+
+#: src/Modules/Admin.php:872
+msgid "Activated in the admin"
+msgstr "Aktivoitu hallintapaneelissa"
+
+#: src/Modules/Admin.php:873
+msgid "Card activated. It can be spent again."
+msgstr "Kortti aktivoitu. Sitä voi taas käyttää."
+
+#: src/Modules/Admin.php:881
+msgid "Enter the new balance as a number, for example 25 or 24,90."
+msgstr "Anna uusi saldo lukuna, esimerkiksi 25 tai 24,90."
+
+#. translators: %s: amount
+#: src/Modules/Admin.php:887
+#, php-format
+msgid "The balance is too large. It can be at most %s."
+msgstr "Saldo on liian suuri. Se voi olla enintään %s."
+
+#: src/Modules/Admin.php:893
+msgid "Give a reason for the change. It is kept in the card's history."
+msgstr "Anna muutokselle syy. Se tallennetaan kortin historiaan."
+
+#: src/Modules/Admin.php:897
+msgid "The balance is already that amount; nothing was changed."
+msgstr "Saldo on jo tämän suuruinen; mitään ei muutettu."
+
+#. translators: 1: old balance, 2: new balance
+#: src/Modules/Admin.php:903
+#, php-format
+msgid "Balance changed from %1$s to %2$s."
+msgstr "Saldo muutettu: %1$s → %2$s."
+
+#: src/Modules/Admin.php:910
+msgid "The email was not sent: this card cannot be spent."
+msgstr "Sähköpostia ei lähetetty: tätä korttia ei voi käyttää."
+
+#: src/Modules/Admin.php:923
+msgid "The email could not be sent. The error has been logged."
+msgstr "Sähköpostia ei voitu lähettää. Virhe on kirjattu lokiin."
+
+#: src/Modules/Admin.php:935
+msgid "Settings saved."
+msgstr "Asetukset tallennettu."
+
+#: src/Modules/Admin.php:941
+msgid "You are not allowed to do this."
+msgstr "Sinulla ei ole oikeutta tehdä tätä."
+
+#: src/Modules/Admin.php:973
+msgid "The expiry date has to be in the future."
+msgstr "Vanhenemispäivän on oltava tulevaisuudessa."
+
+#: src/Modules/Cart.php:240
+msgid "Your session has expired. Reload the page and try again."
+msgstr "Istuntosi on vanhentunut. Lataa sivu uudelleen ja yritä uudelleen."
+
+#: src/Modules/Cart.php:263
+msgid "This gift card is already applied."
+msgstr "Tämä lahjakortti on jo käytössä."
+
+#. translators: %d: number of gift cards
+#: src/Modules/Cart.php:269
+#, php-format
+msgid "You can use at most %d gift cards on one order."
+msgstr "Voit käyttää yhteen tilaukseen enintään %d lahjakorttia."
+
+#: src/Modules/Cart.php:275
+msgid "Gift cards cannot be used to buy gift cards."
+msgstr "Lahjakortteja ei voi ostaa lahjakortilla."
+
+#. translators: 1: the card's currency code, 2: the cart's currency code
+#: src/Modules/Cart.php:413
+#, php-format
+msgid "This gift card is in %1$s and cannot be used for an order in %2$s."
+msgstr ""
+"Tämän lahjakortin valuutta on %1$s, eikä sitä voi käyttää tilaukseen, jonka "
+"valuutta on %2$s."
+
+#: src/Modules/Cart.php:440
+msgid "This gift card is already in your account balance."
+msgstr "Tämä lahjakortti on jo tilisi saldossa."
+
+#: src/Modules/Cart.php:443
+msgid ""
+"This gift card has been added to an account. Log in to that account to use "
+"it."
+msgstr ""
+"Tämä lahjakortti on lisätty tilille. Kirjaudu kyseiselle tilille "
+"käyttääksesi sitä."
+
+#: src/Modules/ClassicCheckout.php:139
+msgid "Your session expired. Reload the page and try again."
+msgstr "Istuntosi on vanhentunut. Lataa sivu uudelleen ja yritä uudelleen."
+
+#. translators: %s: masked gift card code
+#: src/Modules/Emails.php:107
+#, php-format
+msgid ""
+"The email for gift card %s could not be sent. Check that the gift card email "
+"is enabled, then send it again from the card under WooCommerce → Store "
+"balance."
+msgstr ""
+"Lahjakortin %s sähköpostia ei voitu lähettää. Tarkista, että lahjakortin "
+"sähköposti on käytössä, ja lähetä se sitten uudelleen kortin tiedoista "
+"kohdassa WooCommerce → Asiakassaldot."
+
+#: src/Modules/GiftCardProduct.php:156
+msgid ""
+"Sell this product as a gift card: the customer chooses the amount and who "
+"receives it."
+msgstr ""
+"Myy tämä tuote lahjakorttina: asiakas valitsee summan ja vastaanottajan."
+
+#: src/Modules/GiftCardProduct.php:182
+msgid "From the last save:"
+msgstr "Edellisestä tallennuksesta:"
+
+#: src/Modules/GiftCardProduct.php:185
+msgid ""
+"The price of a gift card is the amount the customer chooses, so the price "
+"fields are hidden. Gift cards are always virtual and sold without VAT: the "
+"VAT is charged on what the card is later spent on."
+msgstr ""
+"Lahjakortin hinta on asiakkaan valitsema summa, joten hintakentät on "
+"piilotettu. Lahjakortit ovat aina virtuaalisia ja ne myydään ilman "
+"arvonlisäveroa: ALV peritään tuotteista, joihin kortti myöhemmin käytetään."
+
+#. translators: %s: currency symbol
+#: src/Modules/GiftCardProduct.php:191
+#, php-format
+msgid "Amounts (%s)"
+msgstr "Summat (%s)"
+
+#: src/Modules/GiftCardProduct.php:196
+msgid ""
+"The amounts the customer can choose from, separated by semicolons. For "
+"example: 25; 50; 100"
+msgstr ""
+"Summat, joista asiakas voi valita, puolipisteillä eroteltuina. Esimerkiksi: "
+"25; 50; 100"
+
+#: src/Modules/GiftCardProduct.php:201
+msgid "Custom amount"
+msgstr "Vapaavalintainen summa"
+
+#: src/Modules/GiftCardProduct.php:202
+msgid "Let the customer enter their own amount."
+msgstr "Anna asiakkaan syöttää oma summa."
+
+#. translators: %s: currency symbol
+#: src/Modules/GiftCardProduct.php:210
+#, php-format
+msgid "Smallest custom amount (%s)"
+msgstr "Pienin vapaavalintainen summa (%s)"
+
+#. translators: %s: currency symbol
+#: src/Modules/GiftCardProduct.php:221
+#, php-format
+msgid "Largest custom amount (%s)"
+msgstr "Suurin vapaavalintainen summa (%s)"
+
+#: src/Modules/GiftCardProduct.php:230
+msgid "Valid for (days)"
+msgstr "Voimassaoloaika (päivää)"
+
+#: src/Modules/GiftCardProduct.php:234
+msgid "Shop default"
+msgstr "Kaupan oletus"
+
+#: src/Modules/GiftCardProduct.php:235
+msgid "Leave empty to use the shop default. 0 means the card never expires."
+msgstr ""
+"Jätä tyhjäksi, jos haluat käyttää kaupan oletusta. 0 tarkoittaa, ettei "
+"kortti vanhene koskaan."
+
+#. translators: %s: list of values
+#: src/Modules/GiftCardProduct.php:365
+#, php-format
+msgid ""
+"These amounts were not understood and were left out: %s. Write amounts as "
+"numbers separated by semicolons, for example 25; 50; 100."
+msgstr ""
+"Näitä summia ei voitu tulkita, ja ne jätettiin pois: %s. Kirjoita summat "
+"lukuina puolipisteillä eroteltuina, esimerkiksi 25; 50; 100."
+
+#: src/Modules/GiftCardProduct.php:376
+msgid ""
+"The smallest custom amount was larger than the largest, so the two were "
+"swapped."
+msgstr ""
+"Pienin vapaavalintainen summa oli suurempi kuin suurin, joten ne vaihdettiin "
+"keskenään."
+
+#: src/Modules/GiftCardProduct.php:382
+msgid ""
+"The gift card had no amounts, so \"Custom amount\" was switched on. Add "
+"amounts to offer fixed choices."
+msgstr ""
+"Lahjakortilla ei ollut summia, joten \"Vapaavalintainen summa\" otettiin "
+"käyttöön. Lisää summia, jos haluat tarjota valmiita vaihtoehtoja."
+
+#: src/Modules/GiftCardProduct.php:438
+msgid "Choose amount"
+msgstr "Valitse summa"
+
+#. translators: 1: smallest amount, 2: largest amount
+#: src/Modules/GiftCardProduct.php:694 templates/product/gift-card-form.php:40
+#, php-format
+msgid "Choose an amount between %1$s and %2$s."
+msgstr "Valitse summa väliltä %1$s – %2$s."
+
+#: src/Modules/GiftCardProduct.php:701
+msgid "Choose one of the amounts."
+msgstr "Valitse jokin summista."
+
+#: src/Modules/GiftCardProduct.php:703
+msgid "Enter the amount for the gift card."
+msgstr "Anna lahjakortin summa."
+
+#: src/Modules/GiftCardProduct.php:705 templates/product/gift-card-form.php:127
+msgid "Enter the amount as a number, for example 50 or 49,90."
+msgstr "Anna summa lukuna, esimerkiksi 50 tai 49,90."
+
+#: src/Modules/GiftCardProduct.php:717
+msgid "Choose an amount for the gift card."
+msgstr "Valitse lahjakortin summa."
+
+#: src/Modules/GiftCardProduct.php:724
+msgid ""
+"Enter a valid email address for the recipient, or leave it empty to receive "
+"the gift card yourself."
+msgstr ""
+"Anna vastaanottajalle kelvollinen sähköpostiosoite tai jätä kenttä tyhjäksi, "
+"niin saat lahjakortin itse."
+
+#. translators: %d: number of characters
+#: src/Modules/GiftCardProduct.php:732
+#, php-format
+msgid "The message can be at most %d characters."
+msgstr "Viestin pituus voi olla enintään %d merkkiä."
+
+#: src/Modules/GiftCardProduct.php:744
+msgid "Enter a valid delivery date."
+msgstr "Anna kelvollinen toimituspäivä."
+
+#: src/Modules/GiftCardProduct.php:746
+msgid "The delivery date cannot be in the past."
+msgstr "Toimituspäivä ei voi olla menneisyydessä."
+
+#: src/Modules/GiftCardProduct.php:748
+msgid "The delivery date can be at most one year from now."
+msgstr "Toimituspäivä voi olla enintään vuoden päässä."
+
+#: src/Modules/GiftCardProduct.php:803 src/Modules/GiftCardProduct.php:929
+msgid "Choose an amount for the gift card on its product page."
+msgstr "Valitse lahjakortin summa sen tuotesivulla."
+
+#. translators: %s: product name
+#: src/Modules/GiftCardProduct.php:958
+#, php-format
+msgid ""
+"\"%s\" was removed from your cart because its amount was chosen in another "
+"currency. Please add it again."
+msgstr ""
+"\"%s\" poistettiin ostoskoristasi, koska sen summa oli valittu toisessa "
+"valuutassa. Lisää se uudelleen."
+
+#. translators: %s: product name
+#: src/Modules/GiftCardProduct.php:960
+#, php-format
+msgid ""
+"\"%s\" was removed from your cart because no amount was chosen. Please add "
+"it again from its product page."
+msgstr ""
+"\"%s\" poistettiin ostoskoristasi, koska summaa ei ollut valittu. Lisää se "
+"uudelleen tuotesivulta."
+
+#: src/Modules/GiftCardProduct.php:1027
+msgid "Quantity"
+msgstr "Määrä"
+
+#. translators: %d: number of gift cards
+#: src/Modules/GiftCardProduct.php:1031
+#, php-format
+msgid "%d separate gift cards, each emailed to you"
+msgstr "%d erillistä lahjakorttia, jokainen lähetetään sinulle sähköpostilla"
+
+#. translators: %d: number of gift cards
+#: src/Modules/GiftCardProduct.php:1033
+#, php-format
+msgid "%d separate gift cards, each emailed to the same recipient"
+msgstr ""
+"%d erillistä lahjakorttia, jokainen lähetetään samalle vastaanottajalle "
+"sähköpostilla"
+
+#: src/Modules/GiftCardProduct.php:1066 src/Modules/Issuance.php:320
+msgid "To"
+msgstr "Vastaanottaja"
+
+#: src/Modules/GiftCardProduct.php:1068
+msgid "Your own email address"
+msgstr "Oma sähköpostiosoitteesi"
+
+#: src/Modules/GiftCardProduct.php:1080 src/Modules/GiftCardProduct.php:1086
+#: src/Modules/Issuance.php:326 src/Modules/OrderAdmin.php:176
+msgid "Delivery"
+msgstr "Toimitus"
+
+#. translators: %s: date
+#: src/Modules/GiftCardProduct.php:1082
+#, php-format
+msgid "By email on %s"
+msgstr "Sähköpostilla %s"
+
+#: src/Modules/GiftCardProduct.php:1086
+msgid "By email, as soon as the payment is confirmed"
+msgstr "Sähköpostilla heti, kun maksu on vahvistettu"
+
+#. translators: %s: product name
+#: src/Modules/Issuance.php:105
+#, php-format
+msgid ""
+"A gift card for \"%s\" could not be created. The error has been logged; "
+"create it by hand under WooCommerce → Store balance."
+msgstr ""
+"Lahjakorttia tuotteelle \"%s\" ei voitu luoda. Virhe on kirjattu lokiin; luo "
+"kortti käsin kohdassa WooCommerce → Asiakassaldot."
+
+#. translators: 1: masked gift card code, 2: recipient email
+#: src/Modules/Issuance.php:120
+#, php-format
+msgid "Gift card %1$s issued to %2$s."
+msgstr "Lahjakortti %1$s myönnetty vastaanottajalle %2$s."
+
+#. translators: %s: masked gift card code
+#: src/Modules/Issuance.php:219
+#, php-format
+msgid ""
+"Warning: gift card %s had already been partly spent when this order was "
+"cancelled or refunded."
+msgstr ""
+"Varoitus: lahjakortista %s oli jo käytetty osa, kun tämä tilaus peruttiin "
+"tai hyvitettiin."
+
+#. translators: 1: order number, 2: order status
+#: src/Modules/Issuance.php:226
+#, php-format
+msgid "Order #%1$s %2$s"
+msgstr "Tilaus #%1$s: %2$s"
+
+#. translators: 1: masked gift card code, 2: amount
+#: src/Modules/Issuance.php:234
+#, php-format
+msgid "Gift card %1$s deactivated (%2$s unspent)."
+msgstr "Lahjakortti %1$s poistettu käytöstä (käyttämättä %2$s)."
+
+#: src/Modules/Issuance.php:261
+msgid ""
+"This order has been refunded, so its gift cards stay deactivated. Activate "
+"them by hand under WooCommerce → Store balance if the customer has paid "
+"again."
+msgstr ""
+"Tämä tilaus on hyvitetty, joten sen lahjakortit pysyvät poissa käytöstä. "
+"Aktivoi ne käsin kohdassa WooCommerce → Asiakassaldot, jos asiakas on "
+"maksanut uudelleen."
+
+#. translators: %s: order number
+#: src/Modules/Issuance.php:273
+#, php-format
+msgid "Order #%s paid"
+msgstr "Tilaus #%s maksettu"
+
+#: src/Modules/Issuance.php:364
+msgid "Cancelled"
+msgstr "Peruttu"
+
+#. translators: %s: date
+#: src/Modules/Issuance.php:370
+#, php-format
+msgid "Emailed on %s"
+msgstr "Lähetetty sähköpostilla %s"
+
+#. translators: %s: date
+#: src/Modules/Issuance.php:378
+#, php-format
+msgid "Will be emailed on %s, in the morning"
+msgstr "Lähetetään sähköpostilla %s aamulla"
+
+#: src/Modules/OrderAdmin.php:49
+msgid "Paid with gift card / store credit"
+msgstr "Maksettu lahjakortilla / ostohyvityksellä"
+
+#. translators: %s: amount
+#: src/Modules/OrderAdmin.php:83
+#, php-format
+msgid "%s returned to the card"
+msgstr "%s palautettu kortille"
+
+#: src/Modules/OrderAdmin.php:96
+msgid "This amount has been returned to the cards it came from."
+msgstr "Tämä summa on palautettu korteille, joilta se veloitettiin."
+
+#. translators: 1: amount paid through the payment method, 2: payment method name
+#: src/Modules/OrderAdmin.php:106
+#, php-format
+msgid "WooCommerce's Refund button only covers the %1$s paid by %2$s."
+msgstr "WooCommercen Hyvitys-painike koskee vain summaa %1$s (maksettu: %2$s)."
+
+#: src/Modules/OrderAdmin.php:108
+msgid "the payment method"
+msgstr "maksutavalla"
+
+#: src/Modules/OrderAdmin.php:111
+msgid ""
+"Nothing was paid through a payment method, so WooCommerce's Refund button "
+"has nothing to refund."
+msgstr ""
+"Mitään ei maksettu maksutavalla, joten WooCommercen Hyvitys-painikkeella ei "
+"ole mitään hyvitettävää."
+
+#. translators: %s: amount
+#: src/Modules/OrderAdmin.php:116
+#, php-format
+msgid ""
+"Setting the order to Cancelled or Refunded returns the full %s to the cards "
+"automatically."
+msgstr ""
+"Kun asetat tilauksen tilaksi Peruttu tai Hyvitetty, koko summa %s palautuu "
+"korteille automaattisesti."
+
+#. translators: %s: link to the "Add store credit" screen
+#: src/Modules/OrderAdmin.php:121
+#, php-format
+msgid ""
+"To give back only part of it, use %s and note the order number. Do not do "
+"both."
+msgstr ""
+"Jos haluat palauttaa vain osan, käytä toimintoa %s ja kirjaa tilausnumero. "
+"Älä tee molempia."
+
+#: src/Modules/OrderAdmin.php:198
+msgid "Created when the order is paid"
+msgstr "Luodaan, kun tilaus on maksettu"
+
+#: src/Modules/Orders.php:215
+msgid "The customer placed a new order instead of paying this one."
+msgstr "Asiakas teki uuden tilauksen sen sijaan, että olisi maksanut tämän."
+
+#: src/Modules/Orders.php:252
+msgid "Checkout retried"
+msgstr "Kassalla yritettiin uudelleen"
+
+#: src/Modules/Orders.php:287
+msgid "Checkout aborted"
+msgstr "Kassa keskeytettiin"
+
+#: src/Modules/Orders.php:311
+msgid ""
+"Your gift card or store credit balance has changed. Please review the order "
+"total and try again."
+msgstr ""
+"Lahjakorttisi tai ostohyvityksesi saldo on muuttunut. Tarkista tilauksen "
+"loppusumma ja yritä uudelleen."
+
+#. translators: 1: amount, 2: list of masked card codes
+#: src/Modules/Orders.php:329
+#, php-format
+msgid "%1$s paid with gift card / store credit (%2$s)."
+msgstr "%1$s maksettu lahjakortilla / ostohyvityksellä (%2$s)."
+
+#: src/Modules/Orders.php:358 src/Modules/Orders.php:642
+msgid "Order removed"
+msgstr "Tilaus poistettu"
+
+#. translators: %s: order status
+#: src/Modules/Orders.php:360
+#, php-format
+msgid "Order %s"
+msgstr "Tilaus: %s"
+
+#: src/Modules/Orders.php:530
+msgid ""
+"The gift card or store credit on this order is no longer applied, so its "
+"total has changed. Please review it and pay again."
+msgstr ""
+"Tilauksen lahjakortti tai ostohyvitys ei ole enää käytössä, joten tilauksen "
+"loppusumma on muuttunut. Tarkista summa ja maksa uudelleen."
+
+#. translators: %s: amount
+#: src/Modules/Orders.php:585
+#, php-format
+msgid ""
+"The %s of gift card / store credit this order was placed with is not on it "
+"any more, so it has been added back to the total to pay."
+msgstr ""
+"Tilausta tehtäessä käytetty lahjakortti / ostohyvitys (%s) ei ole enää "
+"tilauksella, joten summa on lisätty takaisin maksettavaan loppusummaan."
+
+#. translators: %s: amount
+#: src/Modules/Orders.php:617
+#, php-format
+msgid ""
+"The amount paid through the payment method has been refunded. %s was paid "
+"with gift card / store credit and is still on this order: set the order to "
+"Refunded to return all of it to the cards, or change a card's balance by "
+"hand to return part of it."
+msgstr ""
+"Maksutavalla maksettu summa on hyvitetty. %s maksettiin lahjakortilla / "
+"ostohyvityksellä, ja se on edelleen tällä tilauksella: aseta tilauksen "
+"tilaksi Hyvitetty, jos haluat palauttaa koko summan korteille, tai muuta "
+"kortin saldoa käsin, jos haluat palauttaa vain osan."
+
+#. translators: 1: amount, 2: the cards it went back to, e.g. "Gift card ••••-AB12, Store credit #75"
+#: src/Modules/Orders.php:744
+#, php-format
+msgid "%1$s returned to %2$s."
+msgstr "%1$s palautettu: %2$s."
+
+#: src/Modules/Orders.php:768
+msgid "Order reopened"
+msgstr "Tilaus avattu uudelleen"
+
+#. translators: %s: amount
+#: src/Modules/Orders.php:798
+#, php-format
+msgid ""
+"This order was reopened, but %s of the gift card / store credit it was paid "
+"with has been spent elsewhere. That amount has been added back to the order "
+"total and is unpaid: collect it or cancel the order."
+msgstr ""
+"Tämä tilaus avattiin uudelleen, mutta sen maksuun käytetystä lahjakortista / "
+"ostohyvityksestä on käytetty muualle %s. Summa on lisätty takaisin tilauksen "
+"loppusummaan ja on maksamatta: peri se asiakkaalta tai peru tilaus."
+
+#: src/Modules/Orders.php:992
+msgid "Gift card & store credit"
+msgstr "Lahjakortti ja ostohyvitys"
+
+#: src/StoreCredit.php:25
+msgid "Store credit needs a customer account."
+msgstr "Ostohyvitys edellyttää asiakastiliä."
+
+#: src/StoreCredit.php:29
+msgid "Enter an amount greater than zero."
+msgstr "Anna nollaa suurempi summa."
+
+#: src/StoreCredit.php:33
+msgid "Unknown currency."
+msgstr "Tuntematon valuutta."
+
+#: src/StoreCredit.php:53
+msgid "The store credit could not be created. The error has been logged."
+msgstr "Ostohyvitystä ei voitu luoda. Virhe on kirjattu lokiin."
+
+#: templates/checkout/balance-form.php:32
+msgid "Apply gift card"
+msgstr "Käytä lahjakortti"
+
+#. translators: %s: amount
+#: templates/checkout/balance-form.php:53
+#, php-format
+msgid "%s left on the card after this order"
+msgstr "Kortille jää tämän tilauksen jälkeen %s"
+
+#. translators: %s: amount
+#: templates/checkout/balance-form.php:72
+#, php-format
+msgid "Use my balance (%s available)"
+msgstr "Käytä saldoani (käytettävissä %s)"
+
+#. translators: %s: amount
+#: templates/emails/gift-card.php:26
+#, php-format
+msgid "%s to spend. Your code is inside."
+msgstr "Käytettävissäsi on %s. Koodi löytyy tästä viestistä."
+
+#. translators: 1: sender name, 2: amount
+#: templates/emails/gift-card.php:35 templates/emails/plain/gift-card.php:26
+#, php-format
+msgid "%1$s has sent you a gift card worth %2$s."
+msgstr "%1$s lähetti sinulle lahjakortin, jonka arvo on %2$s."
+
+#. translators: %s: amount
+#: templates/emails/gift-card.php:42 templates/emails/plain/gift-card.php:29
+#, php-format
+msgid ""
+"Here is your gift card worth %s. To give it to someone, forward this email "
+"or share the code."
+msgstr ""
+"Tässä on lahjakorttisi, jonka arvo on %s. Jos haluat antaa sen jollekulle, "
+"välitä tämä viesti eteenpäin tai jaa koodi."
+
+#: templates/emails/gift-card.php:59 templates/emails/plain/gift-card.php:36
+msgid "Your gift card code"
+msgstr "Lahjakorttisi koodi"
+
+#: templates/emails/gift-card.php:69
+msgid "How to use it"
+msgstr "Näin käytät lahjakortin"
+
+#: templates/emails/gift-card.php:71
+msgid "Add what you like to the cart."
+msgstr "Lisää haluamasi tuotteet ostoskoriin."
+
+#: templates/emails/gift-card.php:72
+msgid ""
+"Enter the code under \"Have a gift card?\" in the cart or at checkout. It "
+"pays for your order, up to the card's value."
+msgstr ""
+"Syötä koodi ostoskorissa tai kassalla kohtaan \"Onko sinulla lahjakortti?\". "
+"Lahjakortilla maksat tilauksesi kortin arvoon asti."
+
+#: templates/emails/gift-card.php:73
+msgid "Anything left on the card stays there for next time."
+msgstr "Jos kortille jää saldoa, se säilyy seuraavaa kertaa varten."
+
+#: templates/emails/gift-card.php:77 templates/emails/plain/gift-card.php:38
+#: templates/emails/plain/store-credit.php:34
+#: templates/emails/store-credit.php:52 templates/myaccount/balance.php:62
+msgid "Start shopping"
+msgstr "Siirry ostoksille"
+
+#: templates/emails/gift-card.php:81
+msgid "Have an account with us?"
+msgstr "Onko sinulla tili meillä?"
+
+#: templates/emails/gift-card.php:82 templates/emails/plain/gift-card.php:39
+msgid "Save the gift card to your account"
+msgstr "Tallenna lahjakortti tilillesi"
+
+#: templates/emails/gift-card.php:83
+msgid "and it is used at checkout automatically, with no code to type."
+msgstr ""
+"ja se käytetään kassalla automaattisesti – koodia ei tarvitse näppäillä."
+
+#. translators: %s: date
+#: templates/emails/gift-card.php:91 templates/emails/plain/gift-card.php:43
+#, php-format
+msgid "The gift card is valid until %s."
+msgstr "Lahjakortti on voimassa %s asti."
+
+#: templates/emails/gift-card.php:98 templates/emails/plain/gift-card.php:46
+msgid "Anyone with this code can use it, so keep this email safe."
+msgstr ""
+"Kuka tahansa, jolla on tämä koodi, voi käyttää lahjakortin, joten säilytä "
+"tämä viesti huolellisesti."
+
+#: templates/emails/plain/gift-card.php:37
+msgid ""
+"Enter the code under \"Have a gift card?\" in the cart or at checkout. It "
+"pays for your order, up to the card's value, and anything left stays on the "
+"card for next time."
+msgstr ""
+"Syötä koodi ostoskorissa tai kassalla kohtaan \"Onko sinulla lahjakortti?\". "
+"Lahjakortilla maksat tilauksesi kortin arvoon asti, ja mahdollinen jäljelle "
+"jäävä saldo säilyy kortilla seuraavaa kertaa varten."
+
+#. translators: %s: amount
+#: templates/emails/plain/store-credit.php:25
+#: templates/emails/store-credit.php:27
+#, php-format
+msgid "%s in store credit has been added to your account."
+msgstr "Tilillesi on lisätty %s ostohyvitystä."
+
+#: templates/emails/plain/store-credit.php:26
+#: templates/emails/store-credit.php:34
+msgid ""
+"There is no code to remember. Log in when you shop and the credit is used at "
+"checkout automatically. If you do not spend it all at once, the rest stays "
+"in your account."
+msgstr ""
+"Koodia ei tarvita. Kirjaudu sisään, kun teet ostoksia, niin hyvitys "
+"käytetään kassalla automaattisesti. Jos et käytä kaikkea kerralla, loput "
+"säilyvät tililläsi."
+
+#. translators: %s: date
+#: templates/emails/plain/store-credit.php:30
+#: templates/emails/store-credit.php:42
+#, php-format
+msgid "The credit is valid until %s."
+msgstr "Ostohyvitys on voimassa %s asti."
+
+#: templates/emails/plain/store-credit.php:33
+#: templates/emails/store-credit.php:50
+msgid "See your store credit"
+msgstr "Katso ostohyvityksesi"
+
+#: templates/myaccount/balance.php:28
+msgid "Gift card received"
+msgstr "Lahjakortti vastaanotettu"
+
+#: templates/myaccount/balance.php:28
+msgid "Credit added"
+msgstr "Ostohyvitys lisätty"
+
+#: templates/myaccount/balance.php:29
+msgid "Added to your account"
+msgstr "Lisätty tilillesi"
+
+#: templates/myaccount/balance.php:30
+msgid "Used on an order"
+msgstr "Käytetty tilaukseen"
+
+#: templates/myaccount/balance.php:31
+msgid "Returned from an order"
+msgstr "Palautettu tilauksesta"
+
+#: templates/myaccount/balance.php:33
+msgid "Adjusted by the shop"
+msgstr "Kauppa muutti saldoa"
+
+#: templates/myaccount/balance.php:34
+msgid "Deactivated by the shop"
+msgstr "Kauppa poisti käytöstä"
+
+#: templates/myaccount/balance.php:35
+msgid "Reactivated by the shop"
+msgstr "Kauppa aktivoi uudelleen"
+
+#: templates/myaccount/balance.php:43
+msgid "Gift card balance"
+msgstr "Lahjakorttien saldo"
+
+#: templates/myaccount/balance.php:43
+msgid "Store credit balance"
+msgstr "Ostohyvityksen saldo"
+
+#: templates/myaccount/balance.php:57
+msgid ""
+"Used automatically at checkout when you are logged in. You can switch it off "
+"there if you would rather save it."
+msgstr ""
+"Käytetään kassalla automaattisesti, kun olet kirjautunut sisään. Voit ottaa "
+"sen siellä pois käytöstä, jos haluat säästää saldon myöhempään."
+
+#: templates/myaccount/balance.php:59
+msgid "Each balance can be used for orders in its own currency."
+msgstr "Kunkin saldon voi käyttää tilauksiin, joissa on sama valuutta."
+
+#: templates/myaccount/balance.php:68
+msgid ""
+"You have no gift cards in your account yet. Got a code? Add it below and it "
+"will be used at checkout automatically."
+msgstr ""
+"Tililläsi ei ole vielä lahjakortteja. Onko sinulla koodi? Lisää se alla, "
+"niin se käytetään kassalla automaattisesti."
+
+#: templates/myaccount/balance.php:69
+msgid ""
+"You have no store credit. If the shop gives you credit it shows up here, and "
+"is used at checkout automatically."
+msgstr ""
+"Sinulla ei ole ostohyvitystä. Jos kauppa myöntää sinulle hyvitystä, se näkyy "
+"täällä ja käytetään kassalla automaattisesti."
+
+#: templates/myaccount/balance.php:77
+msgid "Add a gift card"
+msgstr "Lisää lahjakortti"
+
+#: templates/myaccount/balance.php:97
+msgid ""
+"The 16-character code from your gift card email. Once added, the gift card "
+"belongs to this account and you no longer need the code."
+msgstr ""
+"16-merkkinen koodi, jonka sait lahjakorttiviestissä. Kun olet lisännyt "
+"lahjakortin, se kuuluu tälle tilille etkä enää tarvitse koodia."
+
+#: templates/myaccount/balance.php:101
+msgid "Add to my account"
+msgstr "Lisää tililleni"
+
+#: templates/myaccount/balance.php:110
+msgid "Your gift cards"
+msgstr "Lahjakorttisi"
+
+#: templates/myaccount/balance.php:110
+msgid "Your store credit"
+msgstr "Ostohyvityksesi"
+
+#: templates/myaccount/balance.php:115 templates/myaccount/balance.php:123
+msgid "Added"
+msgstr "Lisätty"
+
+#: templates/myaccount/balance.php:117 templates/myaccount/balance.php:149
+msgid "Valid until"
+msgstr "Voimassa"
+
+#. translators: %s: sender name
+#: templates/myaccount/balance.php:130
+#, php-format
+msgid "From %s"
+msgstr "Lähettäjä: %s"
+
+#. translators: %d: number of days
+#: templates/myaccount/balance.php:158
+#, php-format
+msgid "Expires in %d day"
+msgid_plural "Expires in %d days"
+msgstr[0] "Vanhenee %d päivän kuluttua"
+msgstr[1] "Vanhenee %d päivän kuluttua"
+
+#: templates/myaccount/balance.php:177 templates/myaccount/balance.php:194
+msgid "What happened"
+msgstr "Tapahtuma"
+
+#. translators: %s: order number
+#: templates/myaccount/balance.php:203
+#, php-format
+msgid "(order #%s)"
+msgstr "(tilaus #%s)"
+
+#. translators: %d: number of cards
+#: templates/myaccount/balance.php:232
+#, php-format
+msgid "Past gift cards (%d)"
+msgstr "Aiemmat lahjakortit (%d)"
+
+#. translators: %d: number of credits
+#: templates/myaccount/balance.php:234
+#, php-format
+msgid "Past store credit (%d)"
+msgstr "Aiemmat ostohyvitykset (%d)"
+
+#: templates/myaccount/balance.php:247
+msgid "no longer active (contact us if you think this is a mistake)"
+msgstr "ei enää käytössä (ota meihin yhteyttä, jos tämä on mielestäsi virhe)"
+
+#: templates/myaccount/balance.php:249
+msgid "fully used"
+msgstr "käytetty kokonaan"
+
+#. translators: %s: date
+#: templates/myaccount/balance.php:252
+#, php-format
+msgid "expired on %s"
+msgstr "vanhentunut %s"
+
+#. translators: 1: smallest amount, 2: largest amount
+#: templates/product/gift-card-form.php:34
+#, php-format
+msgid "Between %1$s and %2$s."
+msgstr "Väliltä %1$s – %2$s."
+
+#: templates/product/gift-card-form.php:96
+msgid "Other amount"
+msgstr "Muu summa"
+
+#. translators: %s: currency symbol
+#: templates/product/gift-card-form.php:110
+#, php-format
+msgid "Your amount (%s)"
+msgstr "Oma summa (%s)"
+
+#: templates/product/gift-card-form.php:136
+msgid "Who is it for?"
+msgstr "Kenelle lahjakortti on?"
+
+#: templates/product/gift-card-form.php:141
+#: templates/product/gift-card-form.php:162
+#: templates/product/gift-card-form.php:182
+#: templates/product/gift-card-form.php:218
+msgid "(optional)"
+msgstr "(valinnainen)"
+
+#: templates/product/gift-card-form.php:155
+msgid ""
+"We email the gift card straight to them. Leave empty and we email it to you "
+"instead, to print or forward."
+msgstr ""
+"Lähetämme lahjakortin suoraan hänelle sähköpostilla. Jos jätät kentän "
+"tyhjäksi, lähetämme sen sinulle tulostettavaksi tai eteenpäin välitettäväksi."
+
+#: templates/product/gift-card-form.php:161
+msgid "Your name"
+msgstr "Nimesi"
+
+#: templates/product/gift-card-form.php:175
+msgid "So they know who it is from."
+msgstr "Jotta vastaanottaja tietää, keneltä lahja on."
+
+#. translators: 1: characters typed, 2: maximum characters
+#: templates/product/gift-card-form.php:201
+#, php-format
+msgid "%1$s / %2$s characters"
+msgstr "%1$s / %2$s merkkiä"
+
+#. translators: %d: number of characters
+#: templates/product/gift-card-form.php:205
+#: templates/product/gift-card-form.php:210
+#, php-format
+msgid "Up to %d characters."
+msgstr "Enintään %d merkkiä."
+
+#: templates/product/gift-card-form.php:217
+msgid "Delivery date"
+msgstr "Toimituspäivä"
+
+#: templates/product/gift-card-form.php:232
+msgid ""
+"The day the gift card is emailed. Leave empty to send it right after payment."
+msgstr ""
+"Päivä, jona lahjakortti lähetetään sähköpostilla. Jätä tyhjäksi, jos haluat "
+"lähettää sen heti maksun jälkeen."

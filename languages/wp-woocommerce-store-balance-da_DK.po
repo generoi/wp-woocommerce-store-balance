@@ -1,0 +1,1746 @@
+# Copyright (C) 2026 Genero
+# This file is distributed under the MIT.
+msgid ""
+msgstr ""
+"Project-Id-Version: WooCommerce Store Balance 0.1.5\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/wp-woocommerce-"
+"store-balance\n"
+"POT-Creation-Date: 2026-10-05T10:19:21+03:00\n"
+"PO-Revision-Date: 2026-10-05 12:00+0300\n"
+"Last-Translator: Genero\n"
+"Language-Team: Danish\n"
+"Language: da_DK\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Generator: WP-CLI 2.12.0\n"
+"X-Domain: wp-woocommerce-store-balance\n"
+
+#. Plugin Name of the plugin
+#: wp-woocommerce-store-balance.php:4
+msgid "WooCommerce Store Balance"
+msgstr "WooCommerce Store Balance"
+
+#. Plugin URI of the plugin
+#: wp-woocommerce-store-balance.php:5
+msgid "https://github.com/generoi/wp-woocommerce-store-balance"
+msgstr "https://github.com/generoi/wp-woocommerce-store-balance"
+
+#. Description of the plugin
+#: wp-woocommerce-store-balance.php:6
+msgid ""
+"Gift cards and store credit for WooCommerce: one balance engine, spent after "
+"tax like a payment, locked to its currency."
+msgstr ""
+"Gavekort og tilgodehavender til WooCommerce: én fælles saldomotor, hvor "
+"saldoen bruges efter moms som en betaling og er låst til sin valuta."
+
+#. Author of the plugin
+#: wp-woocommerce-store-balance.php:11
+msgid "Genero"
+msgstr "Genero"
+
+#. Author URI of the plugin
+#: wp-woocommerce-store-balance.php:12
+msgid "https://genero.fi/"
+msgstr "https://genero.fi/"
+
+#: src/Admin/CardsTable.php:28
+msgid "Card"
+msgstr "Kort"
+
+#: src/Admin/CardsTable.php:29
+msgid "Customer / recipient"
+msgstr "Kunde / modtager"
+
+#: src/Admin/CardsTable.php:30 src/Modules/Admin.php:279
+#: templates/myaccount/balance.php:116 templates/myaccount/balance.php:138
+msgid "Balance"
+msgstr "Saldo"
+
+#: src/Admin/CardsTable.php:31 src/Modules/Admin.php:278
+msgid "Status"
+msgstr "Status"
+
+#: src/Admin/CardsTable.php:32 src/Modules/Admin.php:309
+#: src/Modules/Admin.php:681
+msgid "Expires"
+msgstr "Udløber"
+
+#: src/Admin/CardsTable.php:33 src/Modules/Admin.php:313
+#: src/Modules/Admin.php:363
+msgid "Order"
+msgstr "Ordre"
+
+#: src/Admin/CardsTable.php:34 src/Modules/Admin.php:310
+msgid "Created"
+msgstr "Oprettet"
+
+#: src/Admin/CardsTable.php:63 src/Modules/Admin.php:113
+msgid "Active"
+msgstr "Aktiv"
+
+#: src/Admin/CardsTable.php:64 src/Modules/Admin.php:106
+msgid "Spent"
+msgstr "Brugt op"
+
+#: src/Admin/CardsTable.php:65 src/Modules/Admin.php:102
+msgid "Expired"
+msgstr "Udløbet"
+
+#: src/Admin/CardsTable.php:66 src/Modules/Admin.php:98
+#: src/Modules/Admin.php:357
+msgid "Deactivated"
+msgstr "Deaktiveret"
+
+#: src/Admin/CardsTable.php:74
+msgid "No cards match your search."
+msgstr "Ingen kort matcher din søgning."
+
+#: src/Admin/CardsTable.php:79
+msgid "No gift cards or store credit yet."
+msgstr "Der er endnu ingen gavekort eller tilgodehavender."
+
+#. translators: %s: amount
+#: src/Admin/CardsTable.php:126 src/Modules/Admin.php:281
+#: templates/myaccount/balance.php:144
+#, php-format
+msgid "of %s"
+msgstr "af %s"
+
+#: src/Admin/CardsTable.php:185
+msgid "Filter by type"
+msgstr "Filtrer efter type"
+
+#: src/Admin/CardsTable.php:187
+msgid "All types"
+msgstr "Alle typer"
+
+#: src/Admin/CardsTable.php:193
+msgid "Filter by status"
+msgstr "Filtrer efter status"
+
+#: src/Admin/CardsTable.php:195
+msgid "All statuses"
+msgstr "Alle statusser"
+
+#: src/Admin/CardsTable.php:201
+msgid "Filter"
+msgstr "Filtrer"
+
+#: src/BlocksIntegration.php:87
+msgid "Have a gift card?"
+msgstr "Har du et gavekort?"
+
+#: src/BlocksIntegration.php:88 templates/checkout/balance-form.php:19
+#: templates/checkout/balance-form.php:24 templates/myaccount/balance.php:81
+msgid "Gift card code"
+msgstr "Gavekortkode"
+
+#: src/BlocksIntegration.php:89
+msgid "Apply"
+msgstr "Anvend"
+
+#: src/BlocksIntegration.php:90
+msgid "Applying…"
+msgstr "Anvender…"
+
+#: src/BlocksIntegration.php:91 src/Modules/Account.php:214
+#: src/Modules/Cart.php:248
+msgid "Enter a gift card code."
+msgstr "Indtast en gavekortkode."
+
+#: src/BlocksIntegration.php:92 src/Modules/ClassicCheckout.php:97
+msgid "Gift card applied."
+msgstr "Gavekortet er anvendt."
+
+#: src/BlocksIntegration.php:93 src/Modules/ClassicCheckout.php:106
+msgid "Gift card removed."
+msgstr "Gavekortet er fjernet."
+
+#. translators: %s: masked gift card code
+#: src/BlocksIntegration.php:95
+#, php-format
+msgid "Remove gift card %s"
+msgstr "Fjern gavekort %s"
+
+#: src/BlocksIntegration.php:96 templates/checkout/balance-form.php:59
+msgid "Remove"
+msgstr "Fjern"
+
+#. translators: %s: masked gift card code
+#: src/BlocksIntegration.php:98 templates/checkout/balance-form.php:46
+#, php-format
+msgid "Gift card %s"
+msgstr "Gavekort %s"
+
+#. translators: 1: amount used, 2: amount left
+#: src/BlocksIntegration.php:100
+#, php-format
+msgid "%1$s used · %2$s left on the card"
+msgstr "%1$s brugt · %2$s tilbage på kortet"
+
+#: src/BlocksIntegration.php:101 src/BlocksIntegration.php:108
+msgid "Not used: the order is already covered"
+msgstr "Ikke brugt: ordren er allerede dækket"
+
+#. translators: %s: amount
+#: src/BlocksIntegration.php:103
+#, php-format
+msgid "Pay with my balance (%s available)"
+msgstr "Betal med min saldo (%s til rådighed)"
+
+#. translators: 1: gift card amount, 2: store credit amount
+#: src/BlocksIntegration.php:105
+#, php-format
+msgid "%1$s in gift cards, %2$s in store credit"
+msgstr "%1$s i gavekort, %2$s i tilgodehavende"
+
+#. translators: 1: amount used, 2: amount left
+#: src/BlocksIntegration.php:107
+#, php-format
+msgid "%1$s used on this order · %2$s stays in your account"
+msgstr "%1$s bruges på denne ordre · %2$s bliver stående på din konto"
+
+#: src/BlocksIntegration.php:109
+msgid "Saved for later. Tick to use it on this order."
+msgstr "Gemt til senere. Sæt flueben for at bruge den på denne ordre."
+
+#: src/BlocksIntegration.php:110
+msgid "Your balance is used on this order."
+msgstr "Din saldo bruges på denne ordre."
+
+#: src/BlocksIntegration.php:111
+msgid "Your balance is not used on this order."
+msgstr "Din saldo bruges ikke på denne ordre."
+
+#. translators: 1: amount with its currency code, 2: currency code
+#: src/BlocksIntegration.php:113
+#, php-format
+msgid "You also have %1$s. It can be used for orders in %2$s."
+msgstr "Du har også %1$s. Beløbet kan bruges til ordrer i %2$s."
+
+#. translators: %s: currency code
+#: src/BlocksIntegration.php:115
+#, php-format
+msgid "Switch to the %s store"
+msgstr "Skift til %s-butikken"
+
+#: src/BlocksIntegration.php:116 templates/checkout/balance-form.php:16
+msgid "Gift cards and store credit cannot be used to buy gift cards."
+msgstr "Gavekort og tilgodehavende kan ikke bruges til at købe gavekort."
+
+#. translators: %s: amount
+#: src/BlocksIntegration.php:118
+#, php-format
+msgid ""
+"The gift card in your cart (%s) cannot be paid with a gift card or store "
+"credit, so that part is paid another way."
+msgstr ""
+"Gavekortet i din kurv (%s) kan ikke betales med gavekort eller "
+"tilgodehavende, så den del skal betales på en anden måde."
+
+#: src/BlocksIntegration.php:119
+msgid "Left to pay after gift card"
+msgstr "Tilbage at betale efter gavekort"
+
+#: src/BlocksIntegration.php:120
+msgid "Left to pay after store credit"
+msgstr "Tilbage at betale efter tilgodehavende"
+
+#: src/BlocksIntegration.php:122
+msgid "Left to pay after your balance"
+msgstr "Tilbage at betale efter din saldo"
+
+#: src/BlocksIntegration.php:123
+msgid "Your gift card covers this order. Nothing more to pay."
+msgstr "Dit gavekort dækker hele ordren. Du skal ikke betale mere."
+
+#: src/BlocksIntegration.php:124
+msgid "Your store credit covers this order. Nothing more to pay."
+msgstr "Dit tilgodehavende dækker hele ordren. Du skal ikke betale mere."
+
+#: src/BlocksIntegration.php:125
+msgid "Your gift card and store credit cover this order. Nothing more to pay."
+msgstr ""
+"Dit gavekort og tilgodehavende dækker hele ordren. Du skal ikke betale mere."
+
+#: src/BlocksIntegration.php:126 src/Modules/ClassicCheckout.php:49
+msgid "Something went wrong. Please try again."
+msgstr "Noget gik galt. Prøv venligst igen."
+
+#: src/Emails/GiftCardEmail.php:13 src/Modules/Admin.php:92
+#: src/Modules/FallbackImage.php:133 src/Modules/FallbackImage.php:147
+#: src/Modules/GiftCardProduct.php:155 src/Modules/OrderAdmin.php:196
+#: src/Modules/OrderAdmin.php:198 src/Modules/Orders.php:989
+#: templates/myaccount/balance.php:115 templates/myaccount/balance.php:123
+msgid "Gift card"
+msgstr "Gavekort"
+
+#: src/Emails/GiftCardEmail.php:14
+msgid "Sent to the recipient of a gift card, with the code."
+msgstr "Sendes til modtageren af et gavekort og indeholder koden."
+
+#: src/Emails/GiftCardEmail.php:30
+msgid "Your {amount} gift card from {site_title}"
+msgstr "Dit gavekort på {amount} fra {site_title}"
+
+#: src/Emails/GiftCardEmail.php:31
+msgid "You have received a {amount} gift card from {sender}"
+msgstr "Du har fået et gavekort på {amount} fra {sender}"
+
+#: src/Emails/GiftCardEmail.php:37
+msgid "Your gift card is ready"
+msgstr "Dit gavekort er klar"
+
+#: src/Emails/GiftCardEmail.php:38
+msgid "A gift card for you"
+msgstr "Et gavekort til dig"
+
+#: src/Emails/GiftCardEmail.php:50
+msgid "Happy birthday!"
+msgstr "Tillykke med fødselsdagen!"
+
+#: src/Emails/StoreCreditEmail.php:13 src/Modules/Account.php:65
+#: src/Modules/Account.php:84 src/Modules/Admin.php:91
+#: src/Modules/Orders.php:985
+msgid "Store credit"
+msgstr "Tilgodehavende"
+
+#: src/Emails/StoreCreditEmail.php:14
+msgid ""
+"Sent to a customer when store credit is added to their account. It carries "
+"no code: the credit is tied to the account."
+msgstr ""
+"Sendes til en kunde, når der tilføjes tilgodehavende til kundens konto. E-"
+"mailen indeholder ingen kode: tilgodehavendet er knyttet til kontoen."
+
+#: src/Emails/StoreCreditEmail.php:24
+msgid "You have {amount} in store credit at {site_title}"
+msgstr "Du har {amount} i tilgodehavende hos {site_title}"
+
+#: src/Emails/StoreCreditEmail.php:29
+msgid "You have store credit"
+msgstr "Du har et tilgodehavende"
+
+#: src/Modules/Account.php:64 src/Modules/Account.php:79
+msgid "Gift cards"
+msgstr "Gavekort"
+
+#: src/Modules/Account.php:102
+msgid ""
+"Log in to save your gift card to your account. No account? You do not need "
+"one: enter the code in the cart or at checkout under \"Have a gift card?\"."
+msgstr ""
+"Log ind for at gemme dit gavekort på din konto. Har du ingen konto? Det "
+"behøver du heller ikke: indtast koden i kurven eller ved kassen under \"Har "
+"du et gavekort?\"."
+
+#: src/Modules/Account.php:180
+msgid "Your session expired. Please try again."
+msgstr "Din session er udløbet. Prøv venligst igen."
+
+#. translators: %s: amount
+#: src/Modules/Account.php:193
+#, php-format
+msgid ""
+"Gift card added. %s is now in your account and will be used at checkout "
+"automatically."
+msgstr ""
+"Gavekortet er tilføjet. %s står nu på din konto og bruges automatisk ved "
+"kassen."
+
+#. translators: 1: amount, 2: currency code
+#: src/Modules/Account.php:195
+#, php-format
+msgid ""
+"Gift card added. %1$s is now in your account. It can be used for orders paid "
+"in %2$s."
+msgstr ""
+"Gavekortet er tilføjet. %1$s står nu på din konto. Beløbet kan bruges til "
+"ordrer, der betales i %2$s."
+
+#: src/Modules/Account.php:210 src/Modules/Cart.php:244
+msgid "Too many attempts. Please wait ten minutes and try again."
+msgstr "For mange forsøg. Vent venligst ti minutter, og prøv igen."
+
+#: src/Modules/Account.php:232 src/Modules/Cart.php:427
+msgid "We could not find that gift card code. Please check it and try again."
+msgstr "Vi kunne ikke finde den gavekortkode. Tjek koden, og prøv igen."
+
+#: src/Modules/Account.php:236
+msgid "This gift card is already in your account."
+msgstr "Dette gavekort er allerede på din konto."
+
+#: src/Modules/Account.php:240 src/Modules/Account.php:257
+msgid "This gift card has already been added to another account."
+msgstr "Dette gavekort er allerede tilføjet til en anden konto."
+
+#. translators: %s: date
+#: src/Modules/Account.php:246 src/Modules/Cart.php:433
+#, php-format
+msgid "This gift card expired on %s."
+msgstr "Dette gavekort udløb den %s."
+
+#: src/Modules/Account.php:252 src/Modules/Cart.php:447
+msgid "This gift card has no balance left."
+msgstr "Der er ikke flere penge på dette gavekort."
+
+#: src/Modules/Admin.php:47 src/Modules/Admin.php:48 src/Modules/Admin.php:170
+msgid "Store balance"
+msgstr "Butikssaldo"
+
+#: src/Modules/Admin.php:110
+msgid "Scheduled"
+msgstr "Planlagt"
+
+#: src/Modules/Admin.php:132
+msgid "Not added to an account"
+msgstr "Ikke tilføjet til en konto"
+
+#: src/Modules/Admin.php:163
+msgid "Cards & credits"
+msgstr "Gavekort og tilgodehavender"
+
+#: src/Modules/Admin.php:164 src/Modules/Admin.php:612
+#: src/Modules/OrderAdmin.php:122
+msgid "Add store credit"
+msgstr "Tilføj tilgodehavende"
+
+#: src/Modules/Admin.php:165 src/Modules/Admin.php:644
+msgid "Create gift card"
+msgstr "Opret gavekort"
+
+#: src/Modules/Admin.php:166
+msgid "Settings"
+msgstr "Indstillinger"
+
+#: src/Modules/Admin.php:215
+msgid "Unspent gift cards and store credit"
+msgstr "Ubrugte gavekort og tilgodehavender"
+
+#. translators: %s: currency code
+#: src/Modules/Admin.php:224
+#, php-format
+msgid "Unspent store credit (%s)"
+msgstr "Ubrugt tilgodehavende (%s)"
+
+#. translators: %s: currency code
+#: src/Modules/Admin.php:226
+#, php-format
+msgid "Unspent gift cards (%s)"
+msgstr "Ubrugte gavekort (%s)"
+
+#. translators: %d: number of cards
+#: src/Modules/Admin.php:232
+#, php-format
+msgid "%d active card"
+msgid_plural "%d active cards"
+msgstr[0] "%d aktivt kort"
+msgstr[1] "%d aktive kort"
+
+#. translators: %s: search term
+#: src/Modules/Admin.php:249
+#, php-format
+msgid "Search results for: %s"
+msgstr "Søgeresultater for: %s"
+
+#: src/Modules/Admin.php:251
+msgid "Show all"
+msgstr "Vis alle"
+
+#: src/Modules/Admin.php:256
+msgid "Search"
+msgstr "Søg"
+
+#: src/Modules/Admin.php:257
+msgid ""
+"Search by gift card code (or its last four characters), store credit number, "
+"email or customer name."
+msgstr ""
+"Søg på gavekortkode (eller dens sidste fire tegn), tilgodehavendets nummer, "
+"e-mail eller kundenavn."
+
+#: src/Modules/Admin.php:268 src/Modules/Admin.php:861
+msgid "That card does not exist."
+msgstr "Det kort findes ikke."
+
+#: src/Modules/Admin.php:277
+msgid "Type"
+msgstr "Type"
+
+#: src/Modules/Admin.php:284 src/Modules/Admin.php:658
+msgid "Currency"
+msgstr "Valuta"
+
+#: src/Modules/Admin.php:285 src/Modules/Admin.php:590
+msgid "Customer"
+msgstr "Kunde"
+
+#: src/Modules/Admin.php:285
+msgid "In the account of"
+msgstr "På kontoen tilhørende"
+
+#: src/Modules/Admin.php:285
+msgid "Nobody yet: it has not been added to an account"
+msgstr "Ingen endnu: det er ikke tilføjet til en konto"
+
+#: src/Modules/Admin.php:289
+msgid "Code"
+msgstr "Kode"
+
+#: src/Modules/Admin.php:290
+msgid "Copied"
+msgstr "Kopieret"
+
+#: src/Modules/Admin.php:290
+msgid "Copy"
+msgstr "Kopier"
+
+#: src/Modules/Admin.php:291
+msgid "Sent to"
+msgstr "Sendt til"
+
+#: src/Modules/Admin.php:292 src/Modules/Admin.php:633
+#: src/Modules/GiftCardProduct.php:1071
+msgid "From"
+msgstr "Fra"
+
+#: src/Modules/Admin.php:293 src/Modules/Admin.php:637
+#: src/Modules/GiftCardProduct.php:1075
+#: templates/product/gift-card-form.php:181
+msgid "Message"
+msgstr "Besked"
+
+#: src/Modules/Admin.php:296 src/Modules/Admin.php:607
+msgid "Email"
+msgstr "E-mail"
+
+#. translators: %s: date and time
+#: src/Modules/Admin.php:299
+#, php-format
+msgid "Sent %s"
+msgstr "Sendt %s"
+
+#. translators: %s: date and time
+#: src/Modules/Admin.php:305
+#, php-format
+msgid "Scheduled for %s"
+msgstr "Planlagt til %s"
+
+#: src/Modules/Admin.php:308
+msgid "Not sent"
+msgstr "Ikke sendt"
+
+#: src/Modules/Admin.php:309 templates/myaccount/balance.php:150
+msgid "No expiry"
+msgstr "Ingen udløbsdato"
+
+#: src/Modules/Admin.php:316
+msgid "All cards and credits"
+msgstr "Alle gavekort og tilgodehavender"
+
+#. translators: 1: order number, 2: order status, 3: amount
+#: src/Modules/Admin.php:323
+#, php-format
+msgid ""
+"Deactivated because order #%1$s is %2$s. Activating it gives its owner %3$s "
+"that the shop has not been paid for."
+msgstr ""
+"Deaktiveret, fordi ordre #%1$s har status %2$s. Hvis du aktiverer det, får "
+"ejeren %3$s, som butikken ikke har fået betaling for."
+
+#: src/Modules/Admin.php:351
+msgid "Issued"
+msgstr "Udstedt"
+
+#: src/Modules/Admin.php:352
+msgid "Added to an account"
+msgstr "Tilføjet til en konto"
+
+#: src/Modules/Admin.php:353
+msgid "Used"
+msgstr "Brugt"
+
+#: src/Modules/Admin.php:354
+msgid "Returned"
+msgstr "Tilbageført"
+
+#: src/Modules/Admin.php:355 templates/myaccount/balance.php:32
+msgid "Refunded"
+msgstr "Refunderet"
+
+#: src/Modules/Admin.php:356
+msgid "Adjusted"
+msgstr "Justeret"
+
+#: src/Modules/Admin.php:358
+msgid "Activated"
+msgstr "Aktiveret"
+
+#: src/Modules/Admin.php:361 templates/myaccount/balance.php:172
+msgid "History"
+msgstr "Historik"
+
+#: src/Modules/Admin.php:363 templates/myaccount/balance.php:176
+#: templates/myaccount/balance.php:191
+msgid "Date"
+msgstr "Dato"
+
+#: src/Modules/Admin.php:363
+msgid "Event"
+msgstr "Hændelse"
+
+#: src/Modules/Admin.php:363 src/Modules/Admin.php:653
+#: templates/myaccount/balance.php:178 templates/myaccount/balance.php:208
+#: templates/product/gift-card-form.php:78
+msgid "Amount"
+msgstr "Beløb"
+
+#: src/Modules/Admin.php:363
+msgid "Balance after"
+msgstr "Saldo efter"
+
+#: src/Modules/Admin.php:363
+msgid "By"
+msgstr "Af"
+
+#: src/Modules/Admin.php:363
+msgid "Note"
+msgstr "Note"
+
+#: src/Modules/Admin.php:405
+msgid "Actions"
+msgstr "Handlinger"
+
+#: src/Modules/Admin.php:412
+msgid "Send the email again"
+msgstr "Send e-mailen igen"
+
+#: src/Modules/Admin.php:412
+msgid "Send the email now"
+msgstr "Send e-mailen nu"
+
+#. translators: %s: email address
+#: src/Modules/Admin.php:419
+#, php-format
+msgid "Tells %s how much store credit they have. No code is sent."
+msgstr ""
+"Fortæller %s, hvor stort et tilgodehavende kunden har. Der sendes ingen kode."
+
+#. translators: %s: email address
+#: src/Modules/Admin.php:421
+#, php-format
+msgid "Sends the gift card, with its code, to %s."
+msgstr "Sender gavekortet med tilhørende kode til %s."
+
+#: src/Modules/Admin.php:430
+msgid "Deactivate"
+msgstr "Deaktiver"
+
+#: src/Modules/Admin.php:434
+msgid ""
+"A deactivated card cannot be spent. The balance is kept and it can be "
+"activated again."
+msgstr ""
+"Et deaktiveret kort kan ikke bruges. Saldoen bevares, og kortet kan "
+"aktiveres igen."
+
+#: src/Modules/Admin.php:439
+msgid "Activate"
+msgstr "Aktiver"
+
+#. translators: %s: amount
+#: src/Modules/Admin.php:444
+#, php-format
+msgid "Activate this card? Its owner will be able to spend %s."
+msgstr "Vil du aktivere dette kort? Ejeren får mulighed for at bruge %s."
+
+#: src/Modules/Admin.php:451
+msgid "Change the balance"
+msgstr "Ret saldoen"
+
+#: src/Modules/Admin.php:455
+msgid "Save new balance"
+msgstr "Gem ny saldo"
+
+#. translators: %s: currency code
+#: src/Modules/Admin.php:459
+#, php-format
+msgid "New balance (%s)"
+msgstr "Ny saldo (%s)"
+
+#: src/Modules/Admin.php:462 src/Modules/Admin.php:600
+msgid "Reason"
+msgstr "Årsag"
+
+#: src/Modules/Admin.php:463 src/Modules/Admin.php:602
+msgid "Saved in the history. The customer does not see it."
+msgstr "Gemmes i historikken. Kunden kan ikke se den."
+
+#. translators: 1: current balance, 2: placeholder for the new balance, 3: placeholder for the difference
+#: src/Modules/Admin.php:466
+#, php-format
+msgid "Change the balance from %1$s to %2$s (%3$s)?"
+msgstr "Vil du ændre saldoen fra %1$s til %2$s (%3$s)?"
+
+#. translators: %s: amount
+#: src/Modules/Admin.php:498
+#, php-format
+msgid "This is more than the card's original %s."
+msgstr "Det er mere end kortets oprindelige beløb på %s."
+
+#: src/Modules/Admin.php:587
+msgid ""
+"Store credit is tied to the customer's account. They do not get a code: it "
+"is used at checkout automatically when they are logged in."
+msgstr ""
+"Tilgodehavende er knyttet til kundens konto. Kunden får ingen kode: det "
+"bruges automatisk ved kassen, når kunden er logget ind."
+
+#: src/Modules/Admin.php:591
+msgid "Search for a customer…"
+msgstr "Søg efter en kunde…"
+
+#: src/Modules/Admin.php:601
+msgid "E.g. goodwill for a late delivery, order #1234"
+msgstr "F.eks. kompensation for forsinket levering, ordre #1234"
+
+#: src/Modules/Admin.php:608
+msgid "Tell the customer by email"
+msgstr "Giv kunden besked på e-mail"
+
+#: src/Modules/Admin.php:623
+msgid ""
+"Create a gift card without an order: a prize, a replacement, or a balance "
+"moved from another system."
+msgstr ""
+"Opret et gavekort uden en ordre: en præmie, en erstatning eller en saldo, "
+"der flyttes fra et andet system."
+
+#: src/Modules/Admin.php:628 templates/product/gift-card-form.php:140
+msgid "Recipient's email"
+msgstr "Modtagerens e-mail"
+
+#: src/Modules/Admin.php:630
+msgid ""
+"We email the gift card to them. Leave empty to only create the code: it is "
+"shown on the next screen for you to copy and hand over."
+msgstr ""
+"Vi sender gavekortet til modtageren på e-mail. Lad feltet stå tomt for kun "
+"at oprette koden: den vises på næste skærm, så du kan kopiere den og give "
+"den videre."
+
+#: src/Modules/Admin.php:671
+msgid "A balance can only be spent on orders in its own currency."
+msgstr "En saldo kan kun bruges på ordrer i dens egen valuta."
+
+#: src/Modules/Admin.php:683
+msgid "The last day it can be used. Leave empty for no expiry."
+msgstr ""
+"Den sidste dag, det kan bruges. Lad feltet stå tomt, hvis det ikke skal "
+"udløbe."
+
+#: src/Modules/Admin.php:697
+msgid "Gift cards are valid for"
+msgstr "Gavekort er gyldige i"
+
+#: src/Modules/Admin.php:698
+msgid "Store credit is valid for"
+msgstr "Tilgodehavende er gyldigt i"
+
+#: src/Modules/Admin.php:701
+msgid "days"
+msgstr "dage"
+
+#: src/Modules/Admin.php:702
+msgid ""
+"0 means no expiry. Applies to cards created from now on; existing ones keep "
+"their date."
+msgstr ""
+"0 betyder ingen udløbsdato. Gælder for kort, der oprettes fremover; "
+"eksisterende kort beholder deres dato."
+
+#. translators: %s: link to the log screen
+#: src/Modules/Admin.php:709
+#, php-format
+msgid "Problems are recorded in the %s."
+msgstr "Problemer registreres i %s."
+
+#: src/Modules/Admin.php:710
+msgid "WooCommerce log"
+msgstr "WooCommerce-loggen"
+
+#: src/Modules/Admin.php:738
+msgid ""
+"Enter the amount as a number greater than zero, for example 25 or 24,90."
+msgstr "Indtast beløbet som et tal større end nul, f.eks. 25 eller 24,90."
+
+#. translators: %s: amount
+#: src/Modules/Admin.php:744
+#, php-format
+msgid "The amount is too large. At most %s can be added at a time."
+msgstr "Beløbet er for stort. Der kan højst tilføjes %s ad gangen."
+
+#: src/Modules/Admin.php:761
+msgid "Choose a customer."
+msgstr "Vælg en kunde."
+
+#. translators: 1: amount, 2: customer name
+#: src/Modules/Admin.php:787
+#, php-format
+msgid "%1$s store credit added for %2$s."
+msgstr "%1$s i tilgodehavende tilføjet til %2$s."
+
+#. translators: %s: email address
+#: src/Modules/Admin.php:794 src/Modules/Admin.php:918
+#, php-format
+msgid "Email sent to %s."
+msgstr "E-mail sendt til %s."
+
+#: src/Modules/Admin.php:796
+msgid "The email could not be sent; the problem has been logged."
+msgstr "E-mailen kunne ikke sendes; problemet er registreret i loggen."
+
+#: src/Modules/Admin.php:798
+msgid "No email was sent."
+msgstr "Der blev ikke sendt nogen e-mail."
+
+#: src/Modules/Admin.php:813
+msgid "Enter a valid email address for the recipient."
+msgstr "Indtast en gyldig e-mailadresse til modtageren."
+
+#: src/Modules/Admin.php:827
+msgid "Created in the admin"
+msgstr "Oprettet i kontrolpanelet"
+
+#: src/Modules/Admin.php:831
+msgid "The gift card could not be created. The error has been logged."
+msgstr "Gavekortet kunne ikke oprettes. Fejlen er registreret i loggen."
+
+#: src/Modules/Admin.php:837
+msgid ""
+"Gift card created. Nothing was emailed: copy the code below and hand it over."
+msgstr ""
+"Gavekortet er oprettet. Der er ikke sendt nogen e-mail: kopier koden "
+"nedenfor, og giv den videre."
+
+#. translators: %s: email address
+#: src/Modules/Admin.php:845
+#, php-format
+msgid "Gift card created and emailed to %s."
+msgstr "Gavekortet er oprettet og sendt på e-mail til %s."
+
+#: src/Modules/Admin.php:850
+msgid ""
+"Gift card created, but the email could not be sent; the problem has been "
+"logged. Use \"Send the email now\", or hand over the code below."
+msgstr ""
+"Gavekortet er oprettet, men e-mailen kunne ikke sendes; problemet er "
+"registreret i loggen. Brug \"Send e-mailen nu\", eller giv koden nedenfor "
+"videre."
+
+#: src/Modules/Admin.php:868
+msgid "Deactivated in the admin"
+msgstr "Deaktiveret i kontrolpanelet"
+
+#: src/Modules/Admin.php:869
+msgid "Card deactivated. It can no longer be spent."
+msgstr "Kortet er deaktiveret. Det kan ikke længere bruges."
+
+#: src/Modules/Admin.php:872
+msgid "Activated in the admin"
+msgstr "Aktiveret i kontrolpanelet"
+
+#: src/Modules/Admin.php:873
+msgid "Card activated. It can be spent again."
+msgstr "Kortet er aktiveret. Det kan bruges igen."
+
+#: src/Modules/Admin.php:881
+msgid "Enter the new balance as a number, for example 25 or 24,90."
+msgstr "Indtast den nye saldo som et tal, f.eks. 25 eller 24,90."
+
+#. translators: %s: amount
+#: src/Modules/Admin.php:887
+#, php-format
+msgid "The balance is too large. It can be at most %s."
+msgstr "Saldoen er for stor. Den kan højst være %s."
+
+#: src/Modules/Admin.php:893
+msgid "Give a reason for the change. It is kept in the card's history."
+msgstr "Angiv en årsag til ændringen. Den gemmes i kortets historik."
+
+#: src/Modules/Admin.php:897
+msgid "The balance is already that amount; nothing was changed."
+msgstr "Saldoen er allerede på det beløb; intet blev ændret."
+
+#. translators: 1: old balance, 2: new balance
+#: src/Modules/Admin.php:903
+#, php-format
+msgid "Balance changed from %1$s to %2$s."
+msgstr "Saldoen er ændret fra %1$s til %2$s."
+
+#: src/Modules/Admin.php:910
+msgid "The email was not sent: this card cannot be spent."
+msgstr "E-mailen blev ikke sendt: dette kort kan ikke bruges."
+
+#: src/Modules/Admin.php:923
+msgid "The email could not be sent. The error has been logged."
+msgstr "E-mailen kunne ikke sendes. Fejlen er registreret i loggen."
+
+#: src/Modules/Admin.php:935
+msgid "Settings saved."
+msgstr "Indstillingerne er gemt."
+
+#: src/Modules/Admin.php:941
+msgid "You are not allowed to do this."
+msgstr "Du har ikke tilladelse til at gøre dette."
+
+#: src/Modules/Admin.php:973
+msgid "The expiry date has to be in the future."
+msgstr "Udløbsdatoen skal ligge i fremtiden."
+
+#: src/Modules/Cart.php:240
+msgid "Your session has expired. Reload the page and try again."
+msgstr "Din session er udløbet. Genindlæs siden, og prøv igen."
+
+#: src/Modules/Cart.php:263
+msgid "This gift card is already applied."
+msgstr "Dette gavekort er allerede anvendt."
+
+#. translators: %d: number of gift cards
+#: src/Modules/Cart.php:269
+#, php-format
+msgid "You can use at most %d gift cards on one order."
+msgstr "Du kan højst bruge %d gavekort på én ordre."
+
+#: src/Modules/Cart.php:275
+msgid "Gift cards cannot be used to buy gift cards."
+msgstr "Gavekort kan ikke bruges til at købe gavekort."
+
+#. translators: 1: the card's currency code, 2: the cart's currency code
+#: src/Modules/Cart.php:413
+#, php-format
+msgid "This gift card is in %1$s and cannot be used for an order in %2$s."
+msgstr "Dette gavekort er i %1$s og kan ikke bruges til en ordre i %2$s."
+
+#: src/Modules/Cart.php:440
+msgid "This gift card is already in your account balance."
+msgstr "Dette gavekort indgår allerede i saldoen på din konto."
+
+#: src/Modules/Cart.php:443
+msgid ""
+"This gift card has been added to an account. Log in to that account to use "
+"it."
+msgstr ""
+"Dette gavekort er tilføjet til en konto. Log ind på den konto for at bruge "
+"det."
+
+#: src/Modules/ClassicCheckout.php:139
+msgid "Your session expired. Reload the page and try again."
+msgstr "Din session er udløbet. Genindlæs siden, og prøv igen."
+
+#. translators: %s: masked gift card code
+#: src/Modules/Emails.php:107
+#, php-format
+msgid ""
+"The email for gift card %s could not be sent. Check that the gift card email "
+"is enabled, then send it again from the card under WooCommerce → Store "
+"balance."
+msgstr ""
+"E-mailen for gavekort %s kunne ikke sendes. Tjek, at gavekort-e-mailen er "
+"aktiveret, og send den derefter igen fra kortet under WooCommerce → "
+"Butikssaldo."
+
+#: src/Modules/GiftCardProduct.php:156
+msgid ""
+"Sell this product as a gift card: the customer chooses the amount and who "
+"receives it."
+msgstr "Sælg denne vare som et gavekort: kunden vælger beløbet og modtageren."
+
+#: src/Modules/GiftCardProduct.php:182
+msgid "From the last save:"
+msgstr "Fra seneste lagring:"
+
+#: src/Modules/GiftCardProduct.php:185
+msgid ""
+"The price of a gift card is the amount the customer chooses, so the price "
+"fields are hidden. Gift cards are always virtual and sold without VAT: the "
+"VAT is charged on what the card is later spent on."
+msgstr ""
+"Prisen på et gavekort er det beløb, kunden vælger, så prisfelterne er "
+"skjult. Gavekort er altid virtuelle og sælges uden moms: momsen opkræves på "
+"det, kortet senere bruges til."
+
+#. translators: %s: currency symbol
+#: src/Modules/GiftCardProduct.php:191
+#, php-format
+msgid "Amounts (%s)"
+msgstr "Beløb (%s)"
+
+#: src/Modules/GiftCardProduct.php:196
+msgid ""
+"The amounts the customer can choose from, separated by semicolons. For "
+"example: 25; 50; 100"
+msgstr ""
+"De beløb, kunden kan vælge imellem, adskilt med semikolon. For eksempel: 25; "
+"50; 100"
+
+#: src/Modules/GiftCardProduct.php:201
+msgid "Custom amount"
+msgstr "Valgfrit beløb"
+
+#: src/Modules/GiftCardProduct.php:202
+msgid "Let the customer enter their own amount."
+msgstr "Lad kunden indtaste sit eget beløb."
+
+#. translators: %s: currency symbol
+#: src/Modules/GiftCardProduct.php:210
+#, php-format
+msgid "Smallest custom amount (%s)"
+msgstr "Mindste valgfrie beløb (%s)"
+
+#. translators: %s: currency symbol
+#: src/Modules/GiftCardProduct.php:221
+#, php-format
+msgid "Largest custom amount (%s)"
+msgstr "Største valgfrie beløb (%s)"
+
+#: src/Modules/GiftCardProduct.php:230
+msgid "Valid for (days)"
+msgstr "Gyldigt i (dage)"
+
+#: src/Modules/GiftCardProduct.php:234
+msgid "Shop default"
+msgstr "Butikkens standard"
+
+#: src/Modules/GiftCardProduct.php:235
+msgid "Leave empty to use the shop default. 0 means the card never expires."
+msgstr ""
+"Lad feltet stå tomt for at bruge butikkens standard. 0 betyder, at kortet "
+"aldrig udløber."
+
+#. translators: %s: list of values
+#: src/Modules/GiftCardProduct.php:365
+#, php-format
+msgid ""
+"These amounts were not understood and were left out: %s. Write amounts as "
+"numbers separated by semicolons, for example 25; 50; 100."
+msgstr ""
+"Disse beløb kunne ikke læses og er udeladt: %s. Skriv beløbene som tal "
+"adskilt med semikolon, f.eks. 25; 50; 100."
+
+#: src/Modules/GiftCardProduct.php:376
+msgid ""
+"The smallest custom amount was larger than the largest, so the two were "
+"swapped."
+msgstr ""
+"Det mindste valgfrie beløb var større end det største, så de to er byttet om."
+
+#: src/Modules/GiftCardProduct.php:382
+msgid ""
+"The gift card had no amounts, so \"Custom amount\" was switched on. Add "
+"amounts to offer fixed choices."
+msgstr ""
+"Gavekortet havde ingen beløb, så \"Valgfrit beløb\" er slået til. Tilføj "
+"beløb for at tilbyde faste valgmuligheder."
+
+#: src/Modules/GiftCardProduct.php:438
+msgid "Choose amount"
+msgstr "Vælg beløb"
+
+#. translators: 1: smallest amount, 2: largest amount
+#: src/Modules/GiftCardProduct.php:694 templates/product/gift-card-form.php:40
+#, php-format
+msgid "Choose an amount between %1$s and %2$s."
+msgstr "Vælg et beløb mellem %1$s og %2$s."
+
+#: src/Modules/GiftCardProduct.php:701
+msgid "Choose one of the amounts."
+msgstr "Vælg et af beløbene."
+
+#: src/Modules/GiftCardProduct.php:703
+msgid "Enter the amount for the gift card."
+msgstr "Indtast beløbet for gavekortet."
+
+#: src/Modules/GiftCardProduct.php:705 templates/product/gift-card-form.php:127
+msgid "Enter the amount as a number, for example 50 or 49,90."
+msgstr "Indtast beløbet som et tal, f.eks. 50 eller 49,90."
+
+#: src/Modules/GiftCardProduct.php:717
+msgid "Choose an amount for the gift card."
+msgstr "Vælg et beløb for gavekortet."
+
+#: src/Modules/GiftCardProduct.php:724
+msgid ""
+"Enter a valid email address for the recipient, or leave it empty to receive "
+"the gift card yourself."
+msgstr ""
+"Indtast en gyldig e-mailadresse til modtageren, eller lad feltet stå tomt "
+"for selv at modtage gavekortet."
+
+#. translators: %d: number of characters
+#: src/Modules/GiftCardProduct.php:732
+#, php-format
+msgid "The message can be at most %d characters."
+msgstr "Beskeden må højst være på %d tegn."
+
+#: src/Modules/GiftCardProduct.php:744
+msgid "Enter a valid delivery date."
+msgstr "Indtast en gyldig leveringsdato."
+
+#: src/Modules/GiftCardProduct.php:746
+msgid "The delivery date cannot be in the past."
+msgstr "Leveringsdatoen kan ikke ligge i fortiden."
+
+#: src/Modules/GiftCardProduct.php:748
+msgid "The delivery date can be at most one year from now."
+msgstr "Leveringsdatoen kan højst ligge et år frem i tiden."
+
+#: src/Modules/GiftCardProduct.php:803 src/Modules/GiftCardProduct.php:929
+msgid "Choose an amount for the gift card on its product page."
+msgstr "Vælg et beløb for gavekortet på dets vareside."
+
+#. translators: %s: product name
+#: src/Modules/GiftCardProduct.php:958
+#, php-format
+msgid ""
+"\"%s\" was removed from your cart because its amount was chosen in another "
+"currency. Please add it again."
+msgstr ""
+"\"%s\" er fjernet fra din kurv, fordi beløbet var valgt i en anden valuta. "
+"Læg det venligst i kurven igen."
+
+#. translators: %s: product name
+#: src/Modules/GiftCardProduct.php:960
+#, php-format
+msgid ""
+"\"%s\" was removed from your cart because no amount was chosen. Please add "
+"it again from its product page."
+msgstr ""
+"\"%s\" er fjernet fra din kurv, fordi der ikke var valgt et beløb. Læg det "
+"venligst i kurven igen fra varesiden."
+
+#: src/Modules/GiftCardProduct.php:1027
+msgid "Quantity"
+msgstr "Antal"
+
+#. translators: %d: number of gift cards
+#: src/Modules/GiftCardProduct.php:1031
+#, php-format
+msgid "%d separate gift cards, each emailed to you"
+msgstr "%d separate gavekort, som hver især sendes til dig på e-mail"
+
+#. translators: %d: number of gift cards
+#: src/Modules/GiftCardProduct.php:1033
+#, php-format
+msgid "%d separate gift cards, each emailed to the same recipient"
+msgstr ""
+"%d separate gavekort, som hver især sendes på e-mail til den samme modtager"
+
+#: src/Modules/GiftCardProduct.php:1066 src/Modules/Issuance.php:320
+msgid "To"
+msgstr "Til"
+
+#: src/Modules/GiftCardProduct.php:1068
+msgid "Your own email address"
+msgstr "Din egen e-mailadresse"
+
+#: src/Modules/GiftCardProduct.php:1080 src/Modules/GiftCardProduct.php:1086
+#: src/Modules/Issuance.php:326 src/Modules/OrderAdmin.php:176
+msgid "Delivery"
+msgstr "Levering"
+
+#. translators: %s: date
+#: src/Modules/GiftCardProduct.php:1082
+#, php-format
+msgid "By email on %s"
+msgstr "På e-mail den %s"
+
+#: src/Modules/GiftCardProduct.php:1086
+msgid "By email, as soon as the payment is confirmed"
+msgstr "På e-mail, så snart betalingen er bekræftet"
+
+#. translators: %s: product name
+#: src/Modules/Issuance.php:105
+#, php-format
+msgid ""
+"A gift card for \"%s\" could not be created. The error has been logged; "
+"create it by hand under WooCommerce → Store balance."
+msgstr ""
+"Et gavekort for \"%s\" kunne ikke oprettes. Fejlen er registreret i loggen; "
+"opret det manuelt under WooCommerce → Butikssaldo."
+
+#. translators: 1: masked gift card code, 2: recipient email
+#: src/Modules/Issuance.php:120
+#, php-format
+msgid "Gift card %1$s issued to %2$s."
+msgstr "Gavekort %1$s udstedt til %2$s."
+
+#. translators: %s: masked gift card code
+#: src/Modules/Issuance.php:219
+#, php-format
+msgid ""
+"Warning: gift card %s had already been partly spent when this order was "
+"cancelled or refunded."
+msgstr ""
+"Advarsel: gavekort %s var allerede delvist brugt, da denne ordre blev "
+"annulleret eller refunderet."
+
+#. translators: 1: order number, 2: order status
+#: src/Modules/Issuance.php:226
+#, php-format
+msgid "Order #%1$s %2$s"
+msgstr "Ordre #%1$s %2$s"
+
+#. translators: 1: masked gift card code, 2: amount
+#: src/Modules/Issuance.php:234
+#, php-format
+msgid "Gift card %1$s deactivated (%2$s unspent)."
+msgstr "Gavekort %1$s deaktiveret (%2$s ubrugt)."
+
+#: src/Modules/Issuance.php:261
+msgid ""
+"This order has been refunded, so its gift cards stay deactivated. Activate "
+"them by hand under WooCommerce → Store balance if the customer has paid "
+"again."
+msgstr ""
+"Denne ordre er refunderet, så dens gavekort forbliver deaktiverede. Aktiver "
+"dem manuelt under WooCommerce → Butikssaldo, hvis kunden har betalt igen."
+
+#. translators: %s: order number
+#: src/Modules/Issuance.php:273
+#, php-format
+msgid "Order #%s paid"
+msgstr "Ordre #%s betalt"
+
+#: src/Modules/Issuance.php:364
+msgid "Cancelled"
+msgstr "Annulleret"
+
+#. translators: %s: date
+#: src/Modules/Issuance.php:370
+#, php-format
+msgid "Emailed on %s"
+msgstr "Sendt på e-mail den %s"
+
+#. translators: %s: date
+#: src/Modules/Issuance.php:378
+#, php-format
+msgid "Will be emailed on %s, in the morning"
+msgstr "Sendes på e-mail den %s om morgenen"
+
+#: src/Modules/OrderAdmin.php:49
+msgid "Paid with gift card / store credit"
+msgstr "Betalt med gavekort / tilgodehavende"
+
+#. translators: %s: amount
+#: src/Modules/OrderAdmin.php:83
+#, php-format
+msgid "%s returned to the card"
+msgstr "%s tilbageført til kortet"
+
+#: src/Modules/OrderAdmin.php:96
+msgid "This amount has been returned to the cards it came from."
+msgstr "Dette beløb er tilbageført til de kort, det kom fra."
+
+#. translators: 1: amount paid through the payment method, 2: payment method name
+#: src/Modules/OrderAdmin.php:106
+#, php-format
+msgid "WooCommerce's Refund button only covers the %1$s paid by %2$s."
+msgstr "WooCommerces Refunder-knap dækker kun de %1$s, der er betalt med %2$s."
+
+#: src/Modules/OrderAdmin.php:108
+msgid "the payment method"
+msgstr "betalingsmetoden"
+
+#: src/Modules/OrderAdmin.php:111
+msgid ""
+"Nothing was paid through a payment method, so WooCommerce's Refund button "
+"has nothing to refund."
+msgstr ""
+"Intet er betalt via en betalingsmetode, så WooCommerces Refunder-knap har "
+"intet at refundere."
+
+#. translators: %s: amount
+#: src/Modules/OrderAdmin.php:116
+#, php-format
+msgid ""
+"Setting the order to Cancelled or Refunded returns the full %s to the cards "
+"automatically."
+msgstr ""
+"Når du sætter ordren til Annulleret eller Refunderet, tilbageføres hele "
+"beløbet på %s automatisk til kortene."
+
+#. translators: %s: link to the "Add store credit" screen
+#: src/Modules/OrderAdmin.php:121
+#, php-format
+msgid ""
+"To give back only part of it, use %s and note the order number. Do not do "
+"both."
+msgstr ""
+"Hvis du kun vil give en del af beløbet tilbage, skal du bruge %s og notere "
+"ordrenummeret. Gør ikke begge dele."
+
+#: src/Modules/OrderAdmin.php:198
+msgid "Created when the order is paid"
+msgstr "Oprettes, når ordren er betalt"
+
+#: src/Modules/Orders.php:215
+msgid "The customer placed a new order instead of paying this one."
+msgstr "Kunden afgav en ny ordre i stedet for at betale denne."
+
+#: src/Modules/Orders.php:252
+msgid "Checkout retried"
+msgstr "Betaling forsøgt igen"
+
+#: src/Modules/Orders.php:287
+msgid "Checkout aborted"
+msgstr "Betaling afbrudt"
+
+#: src/Modules/Orders.php:311
+msgid ""
+"Your gift card or store credit balance has changed. Please review the order "
+"total and try again."
+msgstr ""
+"Saldoen på dit gavekort eller tilgodehavende har ændret sig. Tjek ordrens "
+"totalbeløb, og prøv igen."
+
+#. translators: 1: amount, 2: list of masked card codes
+#: src/Modules/Orders.php:329
+#, php-format
+msgid "%1$s paid with gift card / store credit (%2$s)."
+msgstr "%1$s betalt med gavekort / tilgodehavende (%2$s)."
+
+#: src/Modules/Orders.php:358 src/Modules/Orders.php:642
+msgid "Order removed"
+msgstr "Ordre slettet"
+
+#. translators: %s: order status
+#: src/Modules/Orders.php:360
+#, php-format
+msgid "Order %s"
+msgstr "Ordre %s"
+
+#: src/Modules/Orders.php:530
+msgid ""
+"The gift card or store credit on this order is no longer applied, so its "
+"total has changed. Please review it and pay again."
+msgstr ""
+"Gavekortet eller tilgodehavendet på denne ordre er ikke længere anvendt, så "
+"totalbeløbet har ændret sig. Tjek ordren, og betal igen."
+
+#. translators: %s: amount
+#: src/Modules/Orders.php:585
+#, php-format
+msgid ""
+"The %s of gift card / store credit this order was placed with is not on it "
+"any more, so it has been added back to the total to pay."
+msgstr ""
+"De %s i gavekort / tilgodehavende, som denne ordre blev afgivet med, er ikke "
+"længere på ordren, så beløbet er lagt tilbage på det beløb, der skal betales."
+
+#. translators: %s: amount
+#: src/Modules/Orders.php:617
+#, php-format
+msgid ""
+"The amount paid through the payment method has been refunded. %s was paid "
+"with gift card / store credit and is still on this order: set the order to "
+"Refunded to return all of it to the cards, or change a card's balance by "
+"hand to return part of it."
+msgstr ""
+"Det beløb, der blev betalt via betalingsmetoden, er refunderet. %s blev "
+"betalt med gavekort / tilgodehavende og står stadig på denne ordre: sæt "
+"ordren til Refunderet for at tilbageføre hele beløbet til kortene, eller ret "
+"et korts saldo manuelt for at tilbageføre en del af det."
+
+#. translators: 1: amount, 2: the cards it went back to, e.g. "Gift card ••••-AB12, Store credit #75"
+#: src/Modules/Orders.php:744
+#, php-format
+msgid "%1$s returned to %2$s."
+msgstr "%1$s tilbageført til %2$s."
+
+#: src/Modules/Orders.php:768
+msgid "Order reopened"
+msgstr "Ordre genåbnet"
+
+#. translators: %s: amount
+#: src/Modules/Orders.php:798
+#, php-format
+msgid ""
+"This order was reopened, but %s of the gift card / store credit it was paid "
+"with has been spent elsewhere. That amount has been added back to the order "
+"total and is unpaid: collect it or cancel the order."
+msgstr ""
+"Denne ordre er genåbnet, men %s af det gavekort / tilgodehavende, den blev "
+"betalt med, er brugt andetsteds. Beløbet er lagt tilbage på ordrens "
+"totalbeløb og er ikke betalt: opkræv det, eller annuller ordren."
+
+#: src/Modules/Orders.php:992
+msgid "Gift card & store credit"
+msgstr "Gavekort og tilgodehavende"
+
+#: src/StoreCredit.php:25
+msgid "Store credit needs a customer account."
+msgstr "Tilgodehavende kræver en kundekonto."
+
+#: src/StoreCredit.php:29
+msgid "Enter an amount greater than zero."
+msgstr "Indtast et beløb større end nul."
+
+#: src/StoreCredit.php:33
+msgid "Unknown currency."
+msgstr "Ukendt valuta."
+
+#: src/StoreCredit.php:53
+msgid "The store credit could not be created. The error has been logged."
+msgstr "Tilgodehavendet kunne ikke oprettes. Fejlen er registreret i loggen."
+
+#: templates/checkout/balance-form.php:32
+msgid "Apply gift card"
+msgstr "Anvend gavekort"
+
+#. translators: %s: amount
+#: templates/checkout/balance-form.php:53
+#, php-format
+msgid "%s left on the card after this order"
+msgstr "%s tilbage på kortet efter denne ordre"
+
+#. translators: %s: amount
+#: templates/checkout/balance-form.php:72
+#, php-format
+msgid "Use my balance (%s available)"
+msgstr "Brug min saldo (%s til rådighed)"
+
+#. translators: %s: amount
+#: templates/emails/gift-card.php:26
+#, php-format
+msgid "%s to spend. Your code is inside."
+msgstr "%s at shoppe for. Din kode finder du herunder."
+
+#. translators: 1: sender name, 2: amount
+#: templates/emails/gift-card.php:35 templates/emails/plain/gift-card.php:26
+#, php-format
+msgid "%1$s has sent you a gift card worth %2$s."
+msgstr "%1$s har sendt dig et gavekort på %2$s."
+
+#. translators: %s: amount
+#: templates/emails/gift-card.php:42 templates/emails/plain/gift-card.php:29
+#, php-format
+msgid ""
+"Here is your gift card worth %s. To give it to someone, forward this email "
+"or share the code."
+msgstr ""
+"Her er dit gavekort på %s. Vil du give det til en anden, kan du videresende "
+"denne e-mail eller dele koden."
+
+#: templates/emails/gift-card.php:59 templates/emails/plain/gift-card.php:36
+msgid "Your gift card code"
+msgstr "Din gavekortkode"
+
+#: templates/emails/gift-card.php:69
+msgid "How to use it"
+msgstr "Sådan bruger du det"
+
+#: templates/emails/gift-card.php:71
+msgid "Add what you like to the cart."
+msgstr "Læg det, du har lyst til, i kurven."
+
+#: templates/emails/gift-card.php:72
+msgid ""
+"Enter the code under \"Have a gift card?\" in the cart or at checkout. It "
+"pays for your order, up to the card's value."
+msgstr ""
+"Indtast koden under \"Har du et gavekort?\" i kurven eller ved kassen. "
+"Gavekortet betaler din ordre op til kortets værdi."
+
+#: templates/emails/gift-card.php:73
+msgid "Anything left on the card stays there for next time."
+msgstr "Er der noget tilbage på kortet, bliver det stående til næste gang."
+
+#: templates/emails/gift-card.php:77 templates/emails/plain/gift-card.php:38
+#: templates/emails/plain/store-credit.php:34
+#: templates/emails/store-credit.php:52 templates/myaccount/balance.php:62
+msgid "Start shopping"
+msgstr "Begynd at shoppe"
+
+#: templates/emails/gift-card.php:81
+msgid "Have an account with us?"
+msgstr "Har du en konto hos os?"
+
+#: templates/emails/gift-card.php:82 templates/emails/plain/gift-card.php:39
+msgid "Save the gift card to your account"
+msgstr "Gem gavekortet på din konto"
+
+#: templates/emails/gift-card.php:83
+msgid "and it is used at checkout automatically, with no code to type."
+msgstr "så bruges det automatisk ved kassen, uden at du skal indtaste en kode."
+
+#. translators: %s: date
+#: templates/emails/gift-card.php:91 templates/emails/plain/gift-card.php:43
+#, php-format
+msgid "The gift card is valid until %s."
+msgstr "Gavekortet er gyldigt til og med %s."
+
+#: templates/emails/gift-card.php:98 templates/emails/plain/gift-card.php:46
+msgid "Anyone with this code can use it, so keep this email safe."
+msgstr "Alle, der har koden, kan bruge den, så pas godt på denne e-mail."
+
+#: templates/emails/plain/gift-card.php:37
+msgid ""
+"Enter the code under \"Have a gift card?\" in the cart or at checkout. It "
+"pays for your order, up to the card's value, and anything left stays on the "
+"card for next time."
+msgstr ""
+"Indtast koden under \"Har du et gavekort?\" i kurven eller ved kassen. "
+"Gavekortet betaler din ordre op til kortets værdi, og er der noget tilbage, "
+"bliver det stående på kortet til næste gang."
+
+#. translators: %s: amount
+#: templates/emails/plain/store-credit.php:25
+#: templates/emails/store-credit.php:27
+#, php-format
+msgid "%s in store credit has been added to your account."
+msgstr "Der er tilføjet %s i tilgodehavende til din konto."
+
+#: templates/emails/plain/store-credit.php:26
+#: templates/emails/store-credit.php:34
+msgid ""
+"There is no code to remember. Log in when you shop and the credit is used at "
+"checkout automatically. If you do not spend it all at once, the rest stays "
+"in your account."
+msgstr ""
+"Du skal ikke huske nogen kode. Log ind, når du handler, så bruges "
+"tilgodehavendet automatisk ved kassen. Bruger du ikke det hele på én gang, "
+"bliver resten stående på din konto."
+
+#. translators: %s: date
+#: templates/emails/plain/store-credit.php:30
+#: templates/emails/store-credit.php:42
+#, php-format
+msgid "The credit is valid until %s."
+msgstr "Tilgodehavendet er gyldigt til og med %s."
+
+#: templates/emails/plain/store-credit.php:33
+#: templates/emails/store-credit.php:50
+msgid "See your store credit"
+msgstr "Se dit tilgodehavende"
+
+#: templates/myaccount/balance.php:28
+msgid "Gift card received"
+msgstr "Gavekort modtaget"
+
+#: templates/myaccount/balance.php:28
+msgid "Credit added"
+msgstr "Tilgodehavende tilføjet"
+
+#: templates/myaccount/balance.php:29
+msgid "Added to your account"
+msgstr "Tilføjet til din konto"
+
+#: templates/myaccount/balance.php:30
+msgid "Used on an order"
+msgstr "Brugt på en ordre"
+
+#: templates/myaccount/balance.php:31
+msgid "Returned from an order"
+msgstr "Tilbageført fra en ordre"
+
+#: templates/myaccount/balance.php:33
+msgid "Adjusted by the shop"
+msgstr "Justeret af butikken"
+
+#: templates/myaccount/balance.php:34
+msgid "Deactivated by the shop"
+msgstr "Deaktiveret af butikken"
+
+#: templates/myaccount/balance.php:35
+msgid "Reactivated by the shop"
+msgstr "Genaktiveret af butikken"
+
+#: templates/myaccount/balance.php:43
+msgid "Gift card balance"
+msgstr "Gavekortsaldo"
+
+#: templates/myaccount/balance.php:43
+msgid "Store credit balance"
+msgstr "Saldo på tilgodehavende"
+
+#: templates/myaccount/balance.php:57
+msgid ""
+"Used automatically at checkout when you are logged in. You can switch it off "
+"there if you would rather save it."
+msgstr ""
+"Bruges automatisk ved kassen, når du er logget ind. Du kan slå det fra dér, "
+"hvis du hellere vil gemme den."
+
+#: templates/myaccount/balance.php:59
+msgid "Each balance can be used for orders in its own currency."
+msgstr "Hver saldo kan bruges til ordrer i dens egen valuta."
+
+#: templates/myaccount/balance.php:68
+msgid ""
+"You have no gift cards in your account yet. Got a code? Add it below and it "
+"will be used at checkout automatically."
+msgstr ""
+"Du har endnu ingen gavekort på din konto. Har du en kode? Tilføj den "
+"nedenfor, så bruges den automatisk ved kassen."
+
+#: templates/myaccount/balance.php:69
+msgid ""
+"You have no store credit. If the shop gives you credit it shows up here, and "
+"is used at checkout automatically."
+msgstr ""
+"Du har intet tilgodehavende. Hvis butikken giver dig et tilgodehavende, "
+"vises det her og bruges automatisk ved kassen."
+
+#: templates/myaccount/balance.php:77
+msgid "Add a gift card"
+msgstr "Tilføj et gavekort"
+
+#: templates/myaccount/balance.php:97
+msgid ""
+"The 16-character code from your gift card email. Once added, the gift card "
+"belongs to this account and you no longer need the code."
+msgstr ""
+"Koden på 16 tegn fra din gavekort-e-mail. Når gavekortet er tilføjet, hører "
+"det til denne konto, og du har ikke længere brug for koden."
+
+#: templates/myaccount/balance.php:101
+msgid "Add to my account"
+msgstr "Tilføj til min konto"
+
+#: templates/myaccount/balance.php:110
+msgid "Your gift cards"
+msgstr "Dine gavekort"
+
+#: templates/myaccount/balance.php:110
+msgid "Your store credit"
+msgstr "Dit tilgodehavende"
+
+#: templates/myaccount/balance.php:115 templates/myaccount/balance.php:123
+msgid "Added"
+msgstr "Tilføjet"
+
+#: templates/myaccount/balance.php:117 templates/myaccount/balance.php:149
+msgid "Valid until"
+msgstr "Gyldigt til"
+
+#. translators: %s: sender name
+#: templates/myaccount/balance.php:130
+#, php-format
+msgid "From %s"
+msgstr "Fra %s"
+
+#. translators: %d: number of days
+#: templates/myaccount/balance.php:158
+#, php-format
+msgid "Expires in %d day"
+msgid_plural "Expires in %d days"
+msgstr[0] "Udløber om %d dag"
+msgstr[1] "Udløber om %d dage"
+
+#: templates/myaccount/balance.php:177 templates/myaccount/balance.php:194
+msgid "What happened"
+msgstr "Hvad skete der"
+
+#. translators: %s: order number
+#: templates/myaccount/balance.php:203
+#, php-format
+msgid "(order #%s)"
+msgstr "(ordre #%s)"
+
+#. translators: %d: number of cards
+#: templates/myaccount/balance.php:232
+#, php-format
+msgid "Past gift cards (%d)"
+msgstr "Tidligere gavekort (%d)"
+
+#. translators: %d: number of credits
+#: templates/myaccount/balance.php:234
+#, php-format
+msgid "Past store credit (%d)"
+msgstr "Tidligere tilgodehavender (%d)"
+
+#: templates/myaccount/balance.php:247
+msgid "no longer active (contact us if you think this is a mistake)"
+msgstr "ikke længere aktivt (kontakt os, hvis du mener, det er en fejl)"
+
+#: templates/myaccount/balance.php:249
+msgid "fully used"
+msgstr "brugt helt op"
+
+#. translators: %s: date
+#: templates/myaccount/balance.php:252
+#, php-format
+msgid "expired on %s"
+msgstr "udløb den %s"
+
+#. translators: 1: smallest amount, 2: largest amount
+#: templates/product/gift-card-form.php:34
+#, php-format
+msgid "Between %1$s and %2$s."
+msgstr "Mellem %1$s og %2$s."
+
+#: templates/product/gift-card-form.php:96
+msgid "Other amount"
+msgstr "Andet beløb"
+
+#. translators: %s: currency symbol
+#: templates/product/gift-card-form.php:110
+#, php-format
+msgid "Your amount (%s)"
+msgstr "Dit beløb (%s)"
+
+#: templates/product/gift-card-form.php:136
+msgid "Who is it for?"
+msgstr "Hvem er det til?"
+
+#: templates/product/gift-card-form.php:141
+#: templates/product/gift-card-form.php:162
+#: templates/product/gift-card-form.php:182
+#: templates/product/gift-card-form.php:218
+msgid "(optional)"
+msgstr "(valgfrit)"
+
+#: templates/product/gift-card-form.php:155
+msgid ""
+"We email the gift card straight to them. Leave empty and we email it to you "
+"instead, to print or forward."
+msgstr ""
+"Vi sender gavekortet direkte til modtageren på e-mail. Lader du feltet stå "
+"tomt, sender vi det til dig i stedet, så du kan printe det eller sende det "
+"videre."
+
+#: templates/product/gift-card-form.php:161
+msgid "Your name"
+msgstr "Dit navn"
+
+#: templates/product/gift-card-form.php:175
+msgid "So they know who it is from."
+msgstr "Så modtageren ved, hvem det er fra."
+
+#. translators: 1: characters typed, 2: maximum characters
+#: templates/product/gift-card-form.php:201
+#, php-format
+msgid "%1$s / %2$s characters"
+msgstr "%1$s / %2$s tegn"
+
+#. translators: %d: number of characters
+#: templates/product/gift-card-form.php:205
+#: templates/product/gift-card-form.php:210
+#, php-format
+msgid "Up to %d characters."
+msgstr "Op til %d tegn."
+
+#: templates/product/gift-card-form.php:217
+msgid "Delivery date"
+msgstr "Leveringsdato"
+
+#: templates/product/gift-card-form.php:232
+msgid ""
+"The day the gift card is emailed. Leave empty to send it right after payment."
+msgstr ""
+"Den dag, gavekortet sendes på e-mail. Lad feltet stå tomt for at sende det "
+"lige efter betalingen."
